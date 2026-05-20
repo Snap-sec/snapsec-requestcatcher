@@ -56,6 +56,37 @@ const clearAllLogs = db.prepare(`
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ─── ANSI color helpers ───────────────────────────────────────────────────
+const ANSI = {
+  reset:   '\x1b[0m',
+  bold:    '\x1b[1m',
+  dim:     '\x1b[2m',
+  // Methods
+  green:   '\x1b[32m',
+  blue:    '\x1b[34m',
+  yellow:  '\x1b[33m',
+  magenta: '\x1b[35m',
+  red:     '\x1b[31m',
+  cyan:    '\x1b[36m',
+  white:   '\x1b[37m',
+  gray:    '\x1b[90m',
+};
+
+const METHOD_COLORS = {
+  GET:    ANSI.green,
+  POST:   ANSI.blue,
+  PUT:    ANSI.yellow,
+  PATCH:  ANSI.magenta,
+  DELETE: ANSI.red,
+};
+
+function statusColor(code) {
+  if (code >= 500) return ANSI.red;
+  if (code >= 400) return ANSI.yellow;
+  if (code >= 300) return ANSI.cyan;
+  return ANSI.green;
+}
+
 // ─── Request Logger Middleware ─────────────────────────────────────────────
 app.use((req, res, next) => {
   // Skip logging for UI pages and static assets
@@ -65,8 +96,9 @@ app.use((req, res, next) => {
 
   if (skip) return next();
 
-  const timestamp = new Date().toISOString();
-  const id = uuidv4();
+  const startTime  = process.hrtime.bigint();   // nanosecond precision
+  const timestamp  = new Date().toISOString();
+  const id         = uuidv4();
 
   // Capture raw body for display
   let rawBody = '';
@@ -127,6 +159,22 @@ app.use((req, res, next) => {
       .join('\n');
 
     updateStatus.run(res.statusCode, resHeadersStr, capturedResponseBody, id);
+
+    // ── Pretty console log ────────────────────────────────────────────────
+    const elapsedMs  = Number(process.hrtime.bigint() - startTime) / 1e6;
+    const timeStr    = elapsedMs < 1000
+      ? `${elapsedMs.toFixed(1)}ms`
+      : `${(elapsedMs / 1000).toFixed(2)}s`;
+    const methodCol  = METHOD_COLORS[req.method] || ANSI.white;
+    const statusCol  = statusColor(res.statusCode);
+
+    console.log(
+      `${ANSI.gray}[~]${ANSI.reset} ` +
+      `${ANSI.bold}${methodCol}${req.method.padEnd(6)}${ANSI.reset} ` +
+      `${ANSI.white}${req.originalUrl}${ANSI.reset} ` +
+      `${statusCol}${ANSI.bold}${res.statusCode}${ANSI.reset} ` +
+      `${ANSI.dim}${timeStr}${ANSI.reset}`
+    );
   });
 
   next();
