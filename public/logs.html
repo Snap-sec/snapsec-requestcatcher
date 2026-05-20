@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Request Logger — Logs</title>
+  <meta name="description" content="View all captured HTTP requests in raw HTTP format." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/public/style.css" />
+</head>
+<body>
+  <!-- Background -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <span class="brand-name">RequestLogger</span>
+      </div>
+      <div class="nav-links">
+        <a href="/" class="nav-link" id="nav-home">Home</a>
+        <a href="/logs" class="nav-link active" id="nav-logs">View Logs</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main-container">
+    <!-- Page Header -->
+    <section class="hero logs-hero">
+      <div class="hero-badge">
+        <span class="badge-dot badge-dot-blue"></span>
+        <span id="log-count-badge">0 requests captured</span>
+      </div>
+      <h1 class="hero-title">Request <span class="gradient-text">Logs</span></h1>
+      <p class="hero-subtitle">
+        All intercepted HTTP requests displayed in raw HTTP format.
+      </p>
+
+      <!-- Search Bar -->
+      <div class="search-wrapper">
+        <div class="search-box">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            type="text"
+            id="search-input"
+            class="search-input"
+            placeholder="Search method, path, headers, body, IP..."
+            oninput="onSearch(this.value)"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="search-clear" id="search-clear" onclick="clearSearch()" title="Clear search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <span class="search-hint" id="search-hint"></span>
+      </div>
+
+      <div class="logs-toolbar">
+        <!-- Filter Pills -->
+        <div class="filter-pills" id="filter-pills">
+          <button class="filter-pill active" data-method="ALL" onclick="setFilter('ALL')">All</button>
+          <button class="filter-pill pill-get" data-method="GET" onclick="setFilter('GET')">GET</button>
+          <button class="filter-pill pill-post" data-method="POST" onclick="setFilter('POST')">POST</button>
+          <button class="filter-pill pill-put" data-method="PUT" onclick="setFilter('PUT')">PUT</button>
+          <button class="filter-pill pill-patch" data-method="PATCH" onclick="setFilter('PATCH')">PATCH</button>
+          <button class="filter-pill pill-delete" data-method="DELETE" onclick="setFilter('DELETE')">DELETE</button>
+        </div>
+
+        <div class="toolbar-actions">
+          <button class="refresh-btn" id="refresh-btn" onclick="fetchLogs()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 2v6h-6"/>
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+              <path d="M3 22v-6h6"/>
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+            </svg>
+            Refresh
+          </button>
+          <button class="clear-btn" id="clear-btn" onclick="clearLogs()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+              <path d="M10 11v6"></path><path d="M14 11v6"></path>
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+            </svg>
+            Clear All
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Logs List -->
+    <section class="logs-section">
+      <div id="logs-container">
+        <!-- Populated by JS -->
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <h3 class="empty-title">No requests captured yet</h3>
+          <p class="empty-desc">Head to the <a href="/" class="link">Home page</a> and fire some demo requests.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let allLogs = [];
+    let activeFilter = 'ALL';
+    let searchQuery = '';
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast toast-${type} show`;
+      setTimeout(() => { toast.className = 'toast'; }, 3000);
+    }
+
+    function setFilter(method) {
+      activeFilter = method;
+      document.querySelectorAll('.filter-pill').forEach(p => {
+        p.classList.toggle('active', p.dataset.method === method);
+      });
+      renderLogs();
+    }
+
+    function onSearch(value) {
+      searchQuery = value.trim().toLowerCase();
+      document.getElementById('search-clear').style.opacity = searchQuery ? '1' : '0';
+      document.getElementById('search-clear').style.pointerEvents = searchQuery ? 'auto' : 'none';
+      renderLogs();
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      onSearch('');
+      document.getElementById('search-input').focus();
+    }
+
+    function matchesSearch(log, query) {
+      if (!query) return true;
+      const haystack = [
+        log.method,
+        log.path,
+        log.requestLine,
+        log.headers,
+        log.body,
+        log.ip,
+        log.status != null ? String(log.status) : '',
+        log.protocol,
+      ].join(' ').toLowerCase();
+      return haystack.includes(query);
+    }
+
+    const STATUS_TEXT = {
+      200: 'OK', 201: 'Created', 204: 'No Content', 301: 'Moved Permanently',
+      304: 'Not Modified', 400: 'Bad Request', 401: 'Unauthorized',
+      403: 'Forbidden', 404: 'Not Found', 405: 'Method Not Allowed',
+      409: 'Conflict', 422: 'Unprocessable Entity', 429: 'Too Many Requests',
+      500: 'Internal Server Error', 502: 'Bad Gateway', 503: 'Service Unavailable',
+    };
+
+    function formatLogEntry(log) {
+      const methodColor = {
+        GET: '#22c55e', POST: '#3b82f6', PUT: '#f97316',
+        PATCH: '#a855f7', DELETE: '#ef4444'
+      }[log.method] || '#94a3b8';
+
+      const statusColor = log.status >= 200 && log.status < 300 ? '#22c55e'
+        : log.status >= 400 ? '#ef4444' : '#f97316';
+
+      const timestamp = new Date(log.timestamp);
+      const timeStr = timestamp.toLocaleTimeString('en-US', { hour12: false });
+      const dateStr = timestamp.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      // ── Build raw HTTP request text ────────────────────────────────────
+      let rawRequest = `${log.requestLine}\n`;
+      if (log.headers) rawRequest += log.headers + '\n';
+      if (log.body)    rawRequest += '\n' + log.body;
+
+      // ── Build raw HTTP response text ───────────────────────────────────
+      const statusText = STATUS_TEXT[log.status] || '';
+      const responseLine = log.status
+        ? `${log.protocol} ${log.status} ${statusText}`
+        : null;
+
+      let rawResponse = '';
+      if (responseLine) {
+        rawResponse += responseLine + '\n';
+        if (log.responseHeaders) rawResponse += log.responseHeaders + '\n';
+        if (log.responseBody)    rawResponse += '\n' + log.responseBody;
+      }
+
+      const highlightedReq = syntaxHighlight(rawRequest, log.method);
+      const highlightedRes = rawResponse
+        ? syntaxHighlightResponse(rawResponse, log.status)
+        : '<span style="color:#64748b;font-style:italic">No response captured</span>';
+
+      return `
+        <div class="log-entry" id="log-${log.id}" data-method="${log.method}">
+          <div class="log-entry-header" onclick="toggleLog('${log.id}')">
+            <div class="log-entry-left">
+              <span class="log-method-badge" style="--mc:${methodColor}">${log.method}</span>
+              <span class="log-path">${log.path}</span>
+              ${log.status ? `<span class="log-status" style="color:${statusColor}">${log.status}</span>` : ''}
+            </div>
+            <div class="log-entry-right">
+              <span class="log-time">${dateStr} ${timeStr}</span>
+              <svg class="chevron" id="chevron-${log.id}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="log-body" id="body-${log.id}">
+
+            <!-- Tabs -->
+            <div class="log-tabs" id="tabs-${log.id}">
+              <button class="log-tab active" onclick="switchTab('${log.id}', 'req', this)">Request</button>
+              <button class="log-tab"         onclick="switchTab('${log.id}', 'res', this)">Response</button>
+            </div>
+
+            <!-- Request panel -->
+            <div class="http-block" id="panel-req-${log.id}">
+              <div class="http-block-toolbar">
+                <span class="http-block-label">Raw HTTP Request</span>
+                <button class="copy-btn" onclick="copyText(\`${escapeBacktick(rawRequest)}\`)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  Copy
+                </button>
+              </div>
+              <pre class="http-pre"><code>${highlightedReq}</code></pre>
+            </div>
+
+            <!-- Response panel -->
+            <div class="http-block" id="panel-res-${log.id}" style="display:none">
+              <div class="http-block-toolbar">
+                <span class="http-block-label">Server Response</span>
+                <button class="copy-btn" onclick="copyText(\`${escapeBacktick(rawResponse)}\`)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  Copy
+                </button>
+              </div>
+              <pre class="http-pre"><code>${highlightedRes}</code></pre>
+            </div>
+
+          </div>
+        </div>
+      `;
+    }
+
+    function escapeBacktick(str) {
+      return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function syntaxHighlight(text, method) {
+      const lines = text.split('\n');
+      return lines.map((line, i) => {
+        // First line: request line
+        if (i === 0) {
+          const methodColor = {
+            GET: '#22c55e', POST: '#3b82f6', PUT: '#f97316',
+            PATCH: '#a855f7', DELETE: '#ef4444'
+          }[method] || '#94a3b8';
+          const parts = line.split(' ');
+          if (parts.length >= 3) {
+            const m = `<span style="color:${methodColor};font-weight:600">${escapeHtml(parts[0])}</span>`;
+            const path = `<span style="color:#e2e8f0">${escapeHtml(parts[1])}</span>`;
+            const proto = `<span style="color:#64748b">${escapeHtml(parts.slice(2).join(' '))}</span>`;
+            return `${m} ${path} ${proto}`;
+          }
+        }
+        // Header lines (contain colon separator)
+        if (line.includes(': ') && !line.startsWith('{') && !line.startsWith('[') && line !== '') {
+          const colonIdx = line.indexOf(': ');
+          const key = escapeHtml(line.slice(0, colonIdx));
+          const val = escapeHtml(line.slice(colonIdx + 2));
+          return `<span style="color:#7dd3fc">${key}</span><span style="color:#64748b">: </span><span style="color:#fbbf24">${val}</span>`;
+        }
+        // JSON-like content
+        if (line.trim().startsWith('"') || line.trim().match(/^\{|\}|\[|\]/)) {
+          return `<span style="color:#a78bfa">${escapeHtml(line)}</span>`;
+        }
+        // Empty lines
+        if (line === '') return '';
+        return `<span style="color:#cbd5e1">${escapeHtml(line)}</span>`;
+      }).join('\n');
+    }
+
+    function syntaxHighlightResponse(text, status) {
+      const lines = text.split('\n');
+      return lines.map((line, i) => {
+        if (i === 0) {
+          // Status line e.g. HTTP/1.1 200 OK
+          const parts = line.split(' ');
+          const proto = `<span style="color:#64748b">${escapeHtml(parts[0])}</span>`;
+          const code  = status >= 200 && status < 300
+            ? `<span style="color:#22c55e;font-weight:700">${escapeHtml(parts[1] || '')}</span>`
+            : status >= 400
+            ? `<span style="color:#ef4444;font-weight:700">${escapeHtml(parts[1] || '')}</span>`
+            : `<span style="color:#f97316;font-weight:700">${escapeHtml(parts[1] || '')}</span>`;
+          const msg   = `<span style="color:#e2e8f0">${escapeHtml(parts.slice(2).join(' '))}</span>`;
+          return `${proto} ${code} ${msg}`;
+        }
+        if (line.includes(': ') && !line.startsWith('{') && !line.startsWith('[') && line !== '') {
+          const colonIdx = line.indexOf(': ');
+          const key = escapeHtml(line.slice(0, colonIdx));
+          const val = escapeHtml(line.slice(colonIdx + 2));
+          return `<span style="color:#7dd3fc">${key}</span><span style="color:#64748b">: </span><span style="color:#fbbf24">${val}</span>`;
+        }
+        if (line.trim().startsWith('"') || line.trim().match(/^\{|\}|\[|\]/)) {
+          return `<span style="color:#a78bfa">${escapeHtml(line)}</span>`;
+        }
+        if (line === '') return '';
+        return `<span style="color:#cbd5e1">${escapeHtml(line)}</span>`;
+      }).join('\n');
+    }
+
+    function switchTab(logId, panel, btn) {
+      const tabsEl = document.getElementById(`tabs-${logId}`);
+      tabsEl.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`panel-req-${logId}`).style.display = panel === 'req' ? '' : 'none';
+      document.getElementById(`panel-res-${logId}`).style.display = panel === 'res' ? '' : 'none';
+    }
+
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Copied to clipboard', 'success');
+      }).catch(() => showToast('Failed to copy', 'error'));
+    }
+
+
+    function toggleLog(id) {
+      const body = document.getElementById(`body-${id}`);
+      const chevron = document.getElementById(`chevron-${id}`);
+      const isOpen = body.classList.toggle('open');
+      chevron.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+
+
+    function renderLogs() {
+      const container = document.getElementById('logs-container');
+      const countBadge = document.getElementById('log-count-badge');
+      const searchHint = document.getElementById('search-hint');
+
+      // Apply method filter
+      let filtered = activeFilter === 'ALL'
+        ? allLogs
+        : allLogs.filter(l => l.method === activeFilter);
+
+      // Apply search filter across all content fields
+      if (searchQuery) {
+        filtered = filtered.filter(l => matchesSearch(l, searchQuery));
+      }
+
+      // Update badge
+      countBadge.textContent = `${allLogs.length} request${allLogs.length !== 1 ? 's' : ''} captured`;
+
+      // Update search hint
+      if (searchQuery) {
+        searchHint.textContent = `${filtered.length} match${filtered.length !== 1 ? 'es' : ''} for "${searchQuery}"`;
+        searchHint.style.display = 'inline';
+      } else {
+        searchHint.style.display = 'none';
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </div>
+            <h3 class="empty-title">${searchQuery ? 'No matching requests' : 'No requests captured yet'}</h3>
+            <p class="empty-desc">${searchQuery ? `No results for <strong style="color:#e2e8f0">"${searchQuery}"</strong>. Try a different keyword.` : 'Head to the <a href="/" class="link">Home page</a> and fire some demo requests.'}</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(formatLogEntry).join('');
+    }
+
+    async function fetchLogs() {
+      try {
+        const res = await fetch('/api/logs');
+        const logs = await res.json();
+        allLogs = logs;
+        renderLogs();
+      } catch (e) {
+        showToast('Failed to fetch logs', 'error');
+      }
+    }
+
+    async function clearLogs() {
+      if (!confirm('Clear all captured logs?')) return;
+      try {
+        await fetch('/api/logs', { method: 'DELETE' });
+        allLogs = [];
+        renderLogs();
+        showToast('All logs cleared', 'success');
+      } catch (e) {
+        showToast('Failed to clear logs', 'error');
+      }
+    }
+
+    // Initial load
+    fetchLogs();
+  </script>
+</body>
+</html>
