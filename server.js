@@ -204,6 +204,11 @@ app.get('/api/user', (req, res) => {
   res.json({ success: true, method: 'GET', message: 'Fetched user data', data: { id: 1, name: 'John Doe', email: 'john@example.com' } });
 });
 
+// ─── Demo API Endpoints ────────────────────────────────────────────────────
+app.get('/api/admin', (req, res) => {
+  res.json({ success: true, method: 'GET', message: 'Admin Data Fetched Successfully', data: { id: 0, name: 'Admin Admin', email: 'admin@admin.com' } });
+});
+
 app.post('/api/user', (req, res) => {
   res.status(201).json({ success: true, method: 'POST', message: 'User created', data: { id: 2, ...req.body } });
 });
