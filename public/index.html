@@ -28,6 +28,7 @@
       </div>
       <div class="nav-links">
         <a href="/" class="nav-link active" id="nav-home">Home</a>
+        <a href="/custom" class="nav-link" id="nav-custom">Custom Endpoints</a>
         <a href="/logs" class="nav-link" id="nav-logs">View Logs</a>
       </div>
     </div>
@@ -43,7 +44,7 @@
       </div>
       <h1 class="hero-title">API Request <span class="gradient-text">Logger</span></h1>
       <p class="hero-subtitle">
-        Fire demo HTTP requests to <code class="inline-code">/api/user</code> and inspect them in real-time on the Logs page.
+        Fire demo HTTP requests to <code class="inline-code">/api/user</code> &amp; <code class="inline-code">/api/admin</code> and inspect them in real-time on the Logs page.
       </p>
     </section>
 
@@ -141,6 +142,108 @@
           </button>
         </div>
 
+        <!-- ADMIN -->
+        <div class="request-card" id="card-admin" data-method="GET">
+          <div class="card-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/admin</span>
+            <div class="card-status" id="status-admin"></div>
+          </div>
+          <p class="card-desc">Fetch admin account data (privileged endpoint).</p>
+          <div class="card-body-preview">
+            <span class="preview-label">Body</span>
+            <span class="preview-none">— none —</span>
+          </div>
+          <button class="fire-btn" id="btn-admin" onclick="fireRequest('ADMIN')">
+            <span class="btn-icon">▶</span> Fire Request
+          </button>
+        </div>
+
+        <!-- CUSTOM 1 -->
+        <div class="request-card" id="card-custom1" data-method="GET">
+          <div class="card-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/custom/1</span>
+            <div class="card-status" id="status-custom1"></div>
+          </div>
+          <p class="card-desc">Fetch custom endpoint 1 response.</p>
+          <div class="card-body-preview">
+            <span class="preview-label">Body</span>
+            <span class="preview-none">— none —</span>
+          </div>
+          <button class="fire-btn" id="btn-custom1" onclick="fireRequest('CUSTOM1')">
+            <span class="btn-icon">▶</span> Fire Request
+          </button>
+        </div>
+
+        <!-- CUSTOM 2 -->
+        <div class="request-card" id="card-custom2" data-method="GET">
+          <div class="card-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/custom/2</span>
+            <div class="card-status" id="status-custom2"></div>
+          </div>
+          <p class="card-desc">Fetch custom endpoint 2 response.</p>
+          <div class="card-body-preview">
+            <span class="preview-label">Body</span>
+            <span class="preview-none">— none —</span>
+          </div>
+          <button class="fire-btn" id="btn-custom2" onclick="fireRequest('CUSTOM2')">
+            <span class="btn-icon">▶</span> Fire Request
+          </button>
+        </div>
+
+        <!-- CUSTOM 3 -->
+        <div class="request-card" id="card-custom3" data-method="GET">
+          <div class="card-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/custom/3</span>
+            <div class="card-status" id="status-custom3"></div>
+          </div>
+          <p class="card-desc">Fetch custom endpoint 3 response.</p>
+          <div class="card-body-preview">
+            <span class="preview-label">Body</span>
+            <span class="preview-none">— none —</span>
+          </div>
+          <button class="fire-btn" id="btn-custom3" onclick="fireRequest('CUSTOM3')">
+            <span class="btn-icon">▶</span> Fire Request
+          </button>
+        </div>
+
+        <!-- CUSTOM 4 -->
+        <div class="request-card" id="card-custom4" data-method="GET">
+          <div class="card-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/custom/4</span>
+            <div class="card-status" id="status-custom4"></div>
+          </div>
+          <p class="card-desc">Fetch custom endpoint 4 response.</p>
+          <div class="card-body-preview">
+            <span class="preview-label">Body</span>
+            <span class="preview-none">— none —</span>
+          </div>
+          <button class="fire-btn" id="btn-custom4" onclick="fireRequest('CUSTOM4')">
+            <span class="btn-icon">▶</span> Fire Request
+          </button>
+        </div>
+
+        <!-- CUSTOM 5 -->
+        <div class="request-card" id="card-custom5" data-method="GET">
+          <div class="card-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/custom/5</span>
+            <div class="card-status" id="status-custom5"></div>
+          </div>
+          <p class="card-desc">Fetch custom endpoint 5 response.</p>
+          <div class="card-body-preview">
+            <span class="preview-label">Body</span>
+            <span class="preview-none">— none —</span>
+          </div>
+          <button class="fire-btn" id="btn-custom5" onclick="fireRequest('CUSTOM5')">
+            <span class="btn-icon">▶</span> Fire Request
+          </button>
+        </div>
+
       </div>
 
       <!-- Send All Button -->
@@ -149,7 +252,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
           </svg>
-          Send All 5 Requests
+          Send All 11 Requests
         </button>
         <a href="/logs" class="view-logs-link">
           View Logs →
@@ -168,6 +271,12 @@
       PUT:  { name: 'Bob Smith', email: 'bob@example.com', role: 'admin', active: true },
       PATCH: { email: 'new-email@example.com' },
       DELETE: null,
+      ADMIN: null,
+      CUSTOM1: null,
+      CUSTOM2: null,
+      CUSTOM3: null,
+      CUSTOM4: null,
+      CUSTOM5: null,
     };
 
     const methodColors = {
@@ -191,8 +300,9 @@
       card.classList.add('card-firing');
 
       try {
+        const realMethod = (method.startsWith('CUSTOM') || method === 'ADMIN') ? 'GET' : method;
         const options = {
-          method,
+          method: realMethod,
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer demo-token-abc123',
@@ -209,6 +319,12 @@
           PUT:    '/api/user?role=admin',
           PATCH:  '/api/user',
           DELETE: '/api/user',
+          ADMIN:  '/api/admin',
+          CUSTOM1: '/custom/1',
+          CUSTOM2: '/custom/2',
+          CUSTOM3: '/custom/3',
+          CUSTOM4: '/custom/4',
+          CUSTOM5: '/custom/5',
         };
         const res = await fetch(urls[method], options);
         const data = await res.json();
@@ -218,7 +334,8 @@
         card.classList.add('card-success');
         setTimeout(() => card.classList.remove('card-success'), 1000);
 
-        showToast(`${method} /api/user → ${res.status} OK`, 'success');
+        const displayPath = urls[method];
+        showToast(`${realMethod} ${displayPath} → ${res.status} OK`, 'success');
       } catch (err) {
         statusEl.innerHTML = `<span class="status-pill status-err">ERR</span>`;
         showToast(`${method} failed: ${err.message}`, 'error');
@@ -239,7 +356,7 @@
         Sending all requests...
       `;
 
-      const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+      const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'ADMIN', 'CUSTOM1', 'CUSTOM2', 'CUSTOM3', 'CUSTOM4', 'CUSTOM5'];
       for (const method of methods) {
         await fireRequest(method);
         await new Promise(r => setTimeout(r, 300));
@@ -250,9 +367,9 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
         </svg>
-        Send All 5 Requests
+        Send All 11 Requests
       `;
-      showToast('All 5 requests fired! Check the Logs page.', 'success');
+      showToast('All 11 requests fired! Check the Logs page.', 'success');
     }
 
     // Auto-fire all requests when the page loads

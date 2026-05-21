@@ -48,6 +48,35 @@ const getAllLogs = db.prepare(`
   SELECT * FROM request_logs ORDER BY timestamp DESC
 `);
 
+// Create the custom_endpoints table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS custom_endpoints (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint_path TEXT UNIQUE NOT NULL,
+    content_type  TEXT DEFAULT 'application/json',
+    response_body TEXT DEFAULT '{"message": "Custom Response"}',
+    custom_headers TEXT DEFAULT '{}'
+  );
+`);
+
+try { db.exec(`ALTER TABLE custom_endpoints ADD COLUMN custom_headers TEXT DEFAULT '{}'`); } catch (_) {}
+
+// Seed /custom/1 to /custom/5 if they don't exist
+const checkCustom = db.prepare(`SELECT count(*) as count FROM custom_endpoints`).get();
+if (checkCustom.count === 0) {
+  const insertCustom = db.prepare(`INSERT INTO custom_endpoints (endpoint_path, response_body) VALUES (?, ?)`);
+  const insertMany = db.transaction(() => {
+    for (let i = 1; i <= 5; i++) {
+      insertCustom.run(`/custom/${i}`, `{\n  "message": "Hello from custom endpoint ${i}!"\n}`);
+    }
+  });
+  insertMany();
+}
+
+const getAllCustomEndpoints = db.prepare(`SELECT * FROM custom_endpoints ORDER BY id ASC`);
+const getCustomEndpoint = db.prepare(`SELECT * FROM custom_endpoints WHERE endpoint_path = ?`);
+const updateCustomEndpoint = db.prepare(`UPDATE custom_endpoints SET content_type = ?, response_body = ?, custom_headers = ? WHERE id = ?`);
+
 const clearAllLogs = db.prepare(`
   DELETE FROM request_logs
 `);
@@ -90,9 +119,10 @@ function statusColor(code) {
 // ─── Request Logger Middleware ─────────────────────────────────────────────
 app.use((req, res, next) => {
   // Skip logging for UI pages and static assets
-  const skip = ['/', '/logs', '/favicon.ico'].some(p => req.path === p) ||
+  const skip = ['/', '/logs', '/custom', '/favicon.ico'].some(p => req.path === p) ||
                req.path.startsWith('/public') ||
-               req.path.startsWith('/api/logs');
+               req.path.startsWith('/api/logs') ||
+               req.path.startsWith('/api/custom-endpoints');
 
   if (skip) return next();
 
@@ -199,6 +229,10 @@ app.get('/logs', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'logs.html'));
 });
 
+app.get('/custom', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'custom.html'));
+});
+
 // ─── Demo API Endpoints ────────────────────────────────────────────────────
 app.get('/api/user', (req, res) => {
   res.json({ success: true, method: 'GET', message: 'Fetched user data', data: { id: 1, name: 'John Doe', email: 'john@example.com' } });
@@ -223,6 +257,51 @@ app.patch('/api/user', (req, res) => {
 
 app.delete('/api/user', (req, res) => {
   res.json({ success: true, method: 'DELETE', message: 'User deleted', data: { id: 1 } });
+});
+
+// ─── Custom Endpoints Actual Routes ────────────────────────────────────────
+app.all('/custom/:id', (req, res) => {
+  const endpoint = `/custom/${req.params.id}`;
+  const customData = getCustomEndpoint.get(endpoint);
+
+  if (!customData) {
+    return res.status(404).json({ error: 'Custom endpoint not found' });
+  }
+
+  res.set('Content-Type', customData.content_type);
+  if (customData.custom_headers) {
+    try {
+      const headers = JSON.parse(customData.custom_headers);
+      for (const [key, value] of Object.entries(headers)) {
+        res.set(key, value);
+      }
+    } catch (e) {
+      console.error('Failed to parse custom headers:', e);
+    }
+  }
+  res.send(customData.response_body);
+});
+
+// ─── Admin APIs ────────────────────────────────────────────────────────────
+app.get('/api/custom-endpoints', (req, res) => {
+  try {
+    const endpoints = getAllCustomEndpoints.all();
+    res.json(endpoints);
+  } catch (err) {
+    console.error('Error fetching custom endpoints:', err.message);
+    res.status(500).json({ error: 'Failed to fetch custom endpoints' });
+  }
+});
+
+app.put('/api/custom-endpoints/:id', (req, res) => {
+  try {
+    const { content_type, response_body, custom_headers } = req.body;
+    updateCustomEndpoint.run(content_type, response_body, custom_headers || '{}', req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error updating custom endpoint:', err.message);
+    res.status(500).json({ error: 'Failed to update custom endpoint' });
+  }
 });
 
 // ─── Logs API ──────────────────────────────────────────────────────────────

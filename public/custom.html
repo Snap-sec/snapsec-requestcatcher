@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Request Logger — Custom Endpoints</title>
+  <meta name="description" content="Manage custom endpoints and responses." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/public/style.css" />
+  <style>
+    .custom-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .custom-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .custom-card:hover {
+      border-color: var(--border-h);
+      box-shadow: var(--shadow-h);
+    }
+    .custom-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .endpoint-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent2);
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .input-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .custom-input, .custom-textarea {
+      width: 100%;
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 10px 14px;
+      transition: all 0.2s ease;
+    }
+    .custom-input:focus, .custom-textarea:focus {
+      border-color: rgba(37,99,235,0.5);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+    .custom-textarea {
+      resize: vertical;
+      min-height: 120px;
+      line-height: 1.5;
+    }
+    .save-btn {
+      width: 100%;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: white;
+      font-size: 13.5px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: auto;
+    }
+    .save-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .save-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .endpoint-link {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-decoration: underline;
+      margin-left: auto;
+      transition: color 0.2s ease;
+    }
+    .endpoint-link:hover {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <nav class="navbar">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <span class="brand-name">RequestLogger</span>
+      </div>
+      <div class="nav-links">
+        <a href="/" class="nav-link" id="nav-home">Home</a>
+        <a href="/custom" class="nav-link active" id="nav-custom">Custom Endpoints</a>
+        <a href="/logs" class="nav-link" id="nav-logs">View Logs</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-container">
+    <section class="hero logs-hero">
+      <h1 class="hero-title">Custom <span class="gradient-text">Endpoints</span></h1>
+      <p class="hero-subtitle">
+        Define custom responses for specific endpoint routes. These endpoints will return the specified headers and body when requested.
+      </p>
+    </section>
+
+    <section class="requests-section">
+      <div class="custom-grid" id="custom-grid">
+        <!-- Rendered by JS -->
+      </div>
+      <div class="toast" id="toast"></div>
+    </section>
+  </main>
+
+  <script>
+    function escapeHtml(unsafe) {
+      return (unsafe || '').toString()
+           .replace(/&/g, "&amp;")
+           .replace(/</g, "&lt;")
+           .replace(/>/g, "&gt;")
+           .replace(/"/g, "&quot;")
+           .replace(/'/g, "&#039;");
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast toast-${type} show`;
+      setTimeout(() => { toast.className = 'toast'; }, 3000);
+    }
+
+    async function loadEndpoints() {
+      const grid = document.getElementById('custom-grid');
+      try {
+        const res = await fetch('/api/custom-endpoints');
+        const data = await res.json();
+
+        grid.innerHTML = data.map(ep => `
+          <div class="custom-card">
+            <div class="custom-card-header">
+              <span class="method-badge method-get" style="border-color: rgba(126,34,206,0.3); color: #7e22ce; background: rgba(126,34,206,0.15)">ALL</span>
+              <span class="endpoint-title">${escapeHtml(ep.endpoint_path)}</span>
+              <a href="${escapeHtml(ep.endpoint_path)}" target="_blank" class="endpoint-link">Visit &#8599;</a>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label" for="ct-${ep.id}">Content-Type</label>
+              <input type="text" id="ct-${ep.id}" class="custom-input" value="${escapeHtml(ep.content_type) || 'application/json'}" placeholder="application/json">
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label" for="ch-${ep.id}">Custom Headers (JSON)</label>
+              <textarea id="ch-${ep.id}" class="custom-textarea" style="min-height: 80px;" spellcheck="false" placeholder='{"X-My-Header": "Value"}'>${escapeHtml(ep.custom_headers) || '{}'}</textarea>
+            </div>
+
+            <div class="input-group" style="flex-grow: 1;">
+              <label class="input-label" for="rb-${ep.id}">Response Body</label>
+              <textarea id="rb-${ep.id}" class="custom-textarea" spellcheck="false" placeholder="Enter response body...">${escapeHtml(ep.response_body)}</textarea>
+            </div>
+
+            <button class="save-btn" id="btn-${ep.id}" onclick="saveEndpoint(${ep.id}, '${escapeHtml(ep.endpoint_path)}')">
+              Save Response
+            </button>
+          </div>
+        `).join('');
+      } catch (err) {
+        showToast('Failed to load custom endpoints', 'error');
+        console.error(err);
+      }
+    }
+
+    async function saveEndpoint(id, path) {
+      const btn = document.getElementById(`btn-${id}`);
+      const ctInput = document.getElementById(`ct-${id}`);
+      const rbInput = document.getElementById(`rb-${id}`);
+      const chInput = document.getElementById(`ch-${id}`);
+
+      btn.disabled = true;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<span class="spinning">⟳</span> Saving...';
+
+      try {
+        const res = await fetch(`/api/custom-endpoints/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            content_type: ctInput.value,
+            response_body: rbInput.value,
+            custom_headers: chInput.value
+          })
+        });
+        
+        if (!res.ok) throw new Error('Failed to save');
+
+        showToast(`${path} saved successfully!`, 'success');
+      } catch (err) {
+        showToast(`Error saving ${path}`, 'error');
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadEndpoints);
+  </script>
+</body>
+</html>

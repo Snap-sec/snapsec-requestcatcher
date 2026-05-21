@@ -28,6 +28,7 @@
       </div>
       <div class="nav-links">
         <a href="/" class="nav-link" id="nav-home">Home</a>
+        <a href="/custom" class="nav-link" id="nav-custom">Custom Endpoints</a>
         <a href="/logs" class="nav-link active" id="nav-logs">View Logs</a>
       </div>
     </div>
@@ -188,12 +189,12 @@
 
     function formatLogEntry(log) {
       const methodColor = {
-        GET: '#22c55e', POST: '#3b82f6', PUT: '#f97316',
-        PATCH: '#a855f7', DELETE: '#ef4444'
-      }[log.method] || '#94a3b8';
+        GET: '#15803d', POST: '#1d4ed8', PUT: '#c2410c',
+        PATCH: '#7e22ce', DELETE: '#b91c1c'
+      }[log.method] || '#64748b';
 
-      const statusColor = log.status >= 200 && log.status < 300 ? '#22c55e'
-        : log.status >= 400 ? '#ef4444' : '#f97316';
+      const statusColor = log.status >= 200 && log.status < 300 ? '#15803d'
+        : log.status >= 400 ? '#b91c1c' : '#c2410c';
 
       const timestamp = new Date(log.timestamp);
       const timeStr = timestamp.toLocaleTimeString('en-US', { hour12: false });
@@ -298,13 +299,13 @@
         // First line: request line
         if (i === 0) {
           const methodColor = {
-            GET: '#22c55e', POST: '#3b82f6', PUT: '#f97316',
-            PATCH: '#a855f7', DELETE: '#ef4444'
-          }[method] || '#94a3b8';
+            GET: '#15803d', POST: '#1d4ed8', PUT: '#c2410c',
+            PATCH: '#7e22ce', DELETE: '#b91c1c'
+          }[method] || '#64748b';
           const parts = line.split(' ');
           if (parts.length >= 3) {
             const m = `<span style="color:${methodColor};font-weight:600">${escapeHtml(parts[0])}</span>`;
-            const path = `<span style="color:#e2e8f0">${escapeHtml(parts[1])}</span>`;
+            const path = `<span style="color:#1e293b">${escapeHtml(parts[1])}</span>`;
             const proto = `<span style="color:#64748b">${escapeHtml(parts.slice(2).join(' '))}</span>`;
             return `${m} ${path} ${proto}`;
           }
@@ -314,15 +315,15 @@
           const colonIdx = line.indexOf(': ');
           const key = escapeHtml(line.slice(0, colonIdx));
           const val = escapeHtml(line.slice(colonIdx + 2));
-          return `<span style="color:#7dd3fc">${key}</span><span style="color:#64748b">: </span><span style="color:#fbbf24">${val}</span>`;
+          return `<span style="color:#0284c7">${key}</span><span style="color:#64748b">: </span><span style="color:#d97706">${val}</span>`;
         }
         // JSON-like content
         if (line.trim().startsWith('"') || line.trim().match(/^\{|\}|\[|\]/)) {
-          return `<span style="color:#a78bfa">${escapeHtml(line)}</span>`;
+          return `<span style="color:#7e22ce">${escapeHtml(line)}</span>`;
         }
         // Empty lines
         if (line === '') return '';
-        return `<span style="color:#cbd5e1">${escapeHtml(line)}</span>`;
+        return `<span style="color:#475569">${escapeHtml(line)}</span>`;
       }).join('\n');
     }
 
@@ -334,24 +335,24 @@
           const parts = line.split(' ');
           const proto = `<span style="color:#64748b">${escapeHtml(parts[0])}</span>`;
           const code  = status >= 200 && status < 300
-            ? `<span style="color:#22c55e;font-weight:700">${escapeHtml(parts[1] || '')}</span>`
+            ? `<span style="color:#15803d;font-weight:700">${escapeHtml(parts[1] || '')}</span>`
             : status >= 400
-            ? `<span style="color:#ef4444;font-weight:700">${escapeHtml(parts[1] || '')}</span>`
-            : `<span style="color:#f97316;font-weight:700">${escapeHtml(parts[1] || '')}</span>`;
-          const msg   = `<span style="color:#e2e8f0">${escapeHtml(parts.slice(2).join(' '))}</span>`;
+            ? `<span style="color:#b91c1c;font-weight:700">${escapeHtml(parts[1] || '')}</span>`
+            : `<span style="color:#c2410c;font-weight:700">${escapeHtml(parts[1] || '')}</span>`;
+          const msg   = `<span style="color:#1e293b">${escapeHtml(parts.slice(2).join(' '))}</span>`;
           return `${proto} ${code} ${msg}`;
         }
         if (line.includes(': ') && !line.startsWith('{') && !line.startsWith('[') && line !== '') {
           const colonIdx = line.indexOf(': ');
           const key = escapeHtml(line.slice(0, colonIdx));
           const val = escapeHtml(line.slice(colonIdx + 2));
-          return `<span style="color:#7dd3fc">${key}</span><span style="color:#64748b">: </span><span style="color:#fbbf24">${val}</span>`;
+          return `<span style="color:#0284c7">${key}</span><span style="color:#64748b">: </span><span style="color:#d97706">${val}</span>`;
         }
         if (line.trim().startsWith('"') || line.trim().match(/^\{|\}|\[|\]/)) {
-          return `<span style="color:#a78bfa">${escapeHtml(line)}</span>`;
+          return `<span style="color:#7e22ce">${escapeHtml(line)}</span>`;
         }
         if (line === '') return '';
-        return `<span style="color:#cbd5e1">${escapeHtml(line)}</span>`;
+        return `<span style="color:#475569">${escapeHtml(line)}</span>`;
       }).join('\n');
     }
 
@@ -414,7 +415,7 @@
               </svg>
             </div>
             <h3 class="empty-title">${searchQuery ? 'No matching requests' : 'No requests captured yet'}</h3>
-            <p class="empty-desc">${searchQuery ? `No results for <strong style="color:#e2e8f0">"${searchQuery}"</strong>. Try a different keyword.` : 'Head to the <a href="/" class="link">Home page</a> and fire some demo requests.'}</p>
+            <p class="empty-desc">${searchQuery ? `No results for <strong style="color:#111827">"${searchQuery}"</strong>. Try a different keyword.` : 'Head to the <a href="/" class="link">Home page</a> and fire some demo requests.'}</p>
           </div>
         `;
         return;
