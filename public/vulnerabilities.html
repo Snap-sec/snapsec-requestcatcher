@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Request Logger — Vulnerabilities</title>
+  <meta name="description" content="Browse and exploit all 24 intentional web application vulnerabilities included in the Request Logger demo app." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/public/style.css" />
+  <style>
+    /* ── Vulnerability-page-specific styles ─────────────────────────────── */
+    .vuln-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+
+    .vuln-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: all 0.25s ease;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .vuln-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .vuln-card.sev-critical::before { background: linear-gradient(90deg, #dc2626, #ef4444); }
+    .vuln-card.sev-high::before    { background: linear-gradient(90deg, #ea580c, #f97316); }
+    .vuln-card.sev-medium::before  { background: linear-gradient(90deg, #d97706, #f59e0b); }
+    .vuln-card.sev-low::before     { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+    .vuln-card.sev-info::before    { background: linear-gradient(90deg, #7c3aed, #8b5cf6); }
+
+    .vuln-card:hover {
+      border-color: var(--border-h);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-h);
+    }
+
+    .vuln-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .vuln-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    .sev-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 100px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .sev-badge.critical { background: rgba(220,38,38,0.12); color: #dc2626; border: 1px solid rgba(220,38,38,0.3); }
+    .sev-badge.high     { background: rgba(234,88,12,0.12);  color: #ea580c; border: 1px solid rgba(234,88,12,0.3); }
+    .sev-badge.medium   { background: rgba(217,119,6,0.12);  color: #b45309; border: 1px solid rgba(217,119,6,0.3); }
+    .sev-badge.low      { background: rgba(37,99,235,0.12);  color: #2563eb; border: 1px solid rgba(37,99,235,0.3); }
+    .sev-badge.info     { background: rgba(124,58,237,0.12); color: #7c3aed; border: 1px solid rgba(124,58,237,0.3); }
+
+    .vuln-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .vuln-endpoint {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      color: var(--text-dim);
+      background: #f3f4f6;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      word-break: break-all;
+    }
+
+    .exploit-btn {
+      display: block;
+      width: 100%;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      font-size: 13.5px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      text-decoration: none;
+      text-align: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .exploit-btn:hover {
+      background: #f3f4f6;
+      border-color: var(--border-h);
+      transform: translateY(-1px);
+    }
+    .exploit-btn.exploit-danger {
+      border-color: rgba(220,38,38,0.3);
+      color: #dc2626;
+      background: rgba(220,38,38,0.04);
+    }
+    .exploit-btn.exploit-danger:hover {
+      background: rgba(220,38,38,0.08);
+      border-color: rgba(220,38,38,0.5);
+    }
+    .exploit-btn.exploit-warning {
+      border-color: rgba(234,88,12,0.3);
+      color: #ea580c;
+      background: rgba(234,88,12,0.04);
+    }
+    .exploit-btn.exploit-warning:hover {
+      background: rgba(234,88,12,0.08);
+      border-color: rgba(234,88,12,0.5);
+    }
+    .exploit-btn.exploit-primary {
+      border-color: rgba(37,99,235,0.3);
+      color: var(--accent);
+      background: rgba(37,99,235,0.04);
+    }
+    .exploit-btn.exploit-primary:hover {
+      background: rgba(37,99,235,0.08);
+      border-color: rgba(37,99,235,0.5);
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .stat-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+    .dot-critical { background: #dc2626; }
+    .dot-high     { background: #ea580c; }
+    .dot-medium   { background: #d97706; }
+    .dot-low      { background: #2563eb; }
+    .dot-info     { background: #7c3aed; }
+
+    @media (max-width: 640px) {
+      .vuln-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Background Grid -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <span class="brand-name">RequestLogger</span>
+      </div>
+      <div class="nav-links">
+        <a href="/" class="nav-link" id="nav-home">Home</a>
+        <a href="/custom" class="nav-link" id="nav-custom">Custom Endpoints</a>
+        <a href="/vulnerabilities" class="nav-link active" id="nav-vulns">Vulnerabilities</a>
+        <a href="/logs" class="nav-link" id="nav-logs">View Logs</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main-container">
+    <!-- Hero -->
+    <section class="hero logs-hero">
+      <div class="hero-badge">
+        <span class="badge-dot" style="background:#dc2626"></span>
+        24 Live Vulnerability Demos
+      </div>
+      <h1 class="hero-title">Vulnerability <span class="gradient-text">Lab</span></h1>
+      <p class="hero-subtitle">
+        Intentionally vulnerable endpoints for security research and testing.
+        All requests are logged to the <a href="/logs" style="color:var(--accent)">Logs page</a>.
+      </p>
+      <!-- Stats Bar -->
+      <div class="stats-bar">
+        <div class="stat-pill"><div class="stat-dot dot-critical"></div>5 Critical</div>
+        <div class="stat-pill"><div class="stat-dot dot-high"></div>8 High</div>
+        <div class="stat-pill"><div class="stat-dot dot-medium"></div>6 Medium</div>
+        <div class="stat-pill"><div class="stat-dot dot-low"></div>3 Low</div>
+        <div class="stat-pill"><div class="stat-dot dot-info"></div>2 Info</div>
+      </div>
+    </section>
+
+    <!-- Vulnerabilities Grid -->
+    <div class="vuln-grid">
+
+      <!-- 1. Reflected XSS -->
+      <div class="vuln-card sev-high">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Reflected XSS</span>
+          <span class="sev-badge high">High</span>
+        </div>
+        <p class="vuln-desc">Reflects user input directly into the HTML response without escaping, enabling script execution in the victim's browser.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/xss?input=&lt;script&gt;alert('XSS')&lt;/script&gt;</div>
+        <a href="/vulnerabilities/xss?input=<script>alert('XSS')</script>" class="exploit-btn exploit-warning" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 2. Stored XSS -->
+      <div class="vuln-card sev-high">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Stored XSS</span>
+          <span class="sev-badge high">High</span>
+        </div>
+        <p class="vuln-desc">Persistent cross-site scripting in a guestbook — malicious input is stored and rendered for every visitor without sanitization.</p>
+        <div class="vuln-endpoint">GET/POST /vulnerabilities/stored-xss</div>
+        <a href="/vulnerabilities/stored-xss" class="exploit-btn exploit-warning" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 3. Open Redirect -->
+      <div class="vuln-card sev-medium">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Open Redirect</span>
+          <span class="sev-badge medium">Medium</span>
+        </div>
+        <p class="vuln-desc">Redirects the user to an arbitrary URL specified in a query parameter, enabling phishing and token-stealing attacks.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/redirect?url=https://example.com</div>
+        <a href="/vulnerabilities/redirect?url=https://example.com" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 4. OS Command Injection -->
+      <div class="vuln-card sev-critical">
+        <div class="vuln-card-header">
+          <span class="vuln-name">OS Command Injection</span>
+          <span class="sev-badge critical">Critical</span>
+        </div>
+        <p class="vuln-desc">Executes arbitrary OS commands by concatenating user input directly into a shell <code>exec()</code> call without sanitization.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/ping?ip=127.0.0.1;+whoami</div>
+        <a href="/vulnerabilities/ping?ip=127.0.0.1; whoami" class="exploit-btn exploit-danger" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 5. Python Code Injection -->
+      <div class="vuln-card sev-critical">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Python Code Injection</span>
+          <span class="sev-badge critical">Critical</span>
+        </div>
+        <p class="vuln-desc">Executes arbitrary Python code via a subprocess, enabling full server-side code execution through the <code>pymath</code> endpoint.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/pymath?code=__import__('os').system('id')</div>
+        <a href="/vulnerabilities/pymath?code=2+2" class="exploit-btn exploit-danger" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 6. Insecure Deserialization -->
+      <div class="vuln-card sev-critical">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Insecure Deserialization</span>
+          <span class="sev-badge critical">Critical</span>
+        </div>
+        <p class="vuln-desc">Uses <code>eval()</code> to execute arbitrary JavaScript, simulating a real-world node-serialize RCE vulnerability pattern.</p>
+        <div class="vuln-endpoint">POST /vulnerabilities/deserialize</div>
+        <a href="/vulnerabilities/deserialize" class="exploit-btn exploit-danger" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 7. Local File Inclusion (LFI) -->
+      <div class="vuln-card sev-critical">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Local File Inclusion (LFI)</span>
+          <span class="sev-badge critical">Critical</span>
+        </div>
+        <p class="vuln-desc">Reads arbitrary files from the server filesystem via an unvalidated <code>file</code> parameter, exposing sensitive system files.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/lfi?file=/etc/passwd</div>
+        <a href="/vulnerabilities/lfi?file=/etc/passwd" class="exploit-btn exploit-danger" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 8. SSRF -->
+      <div class="vuln-card sev-high">
+        <div class="vuln-card-header">
+          <span class="vuln-name">SSRF</span>
+          <span class="sev-badge high">High</span>
+        </div>
+        <p class="vuln-desc">Server performs requests to arbitrary internal or external URLs, allowing attackers to probe internal services and bypass firewalls.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/ssrf?url=http://localhost:3000</div>
+        <a href="/vulnerabilities/ssrf?url=http://localhost:3000" class="exploit-btn exploit-warning" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 9. SQL Injection -->
+      <div class="vuln-card sev-high">
+        <div class="vuln-card-header">
+          <span class="vuln-name">SQL Injection</span>
+          <span class="sev-badge high">High</span>
+        </div>
+        <p class="vuln-desc">Traditional union-based or error-based SQLi in a search field — input is concatenated directly into the SQL query string.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/sqli?search=' OR '1'='1</div>
+        <a href="/vulnerabilities/sqli?search=' OR '1'='1" class="exploit-btn exploit-warning" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 10. IDOR -->
+      <div class="vuln-card sev-high">
+        <div class="vuln-card-header">
+          <span class="vuln-name">IDOR</span>
+          <span class="sev-badge high">High</span>
+        </div>
+        <p class="vuln-desc">Access any user's profile data by simply changing the <code>id</code> parameter — no authorization check is performed.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/idor/user?id=1</div>
+        <a href="/vulnerabilities/idor/user?id=1" class="exploit-btn exploit-warning" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 11. Unprotected API -->
+      <div class="vuln-card sev-high">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Unprotected API</span>
+          <span class="sev-badge high">High</span>
+        </div>
+        <p class="vuln-desc">Sensitive user data (including plaintext passwords) exposed via a JSON endpoint with no authentication requirement.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/api/users</div>
+        <a href="/vulnerabilities/api/users" class="exploit-btn exploit-warning" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 12. Prototype Pollution -->
+      <div class="vuln-card sev-high">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Prototype Pollution</span>
+          <span class="sev-badge high">High</span>
+        </div>
+        <p class="vuln-desc">A recursive merge function copies all JSON properties without key validation, allowing <code>__proto__</code> injection.</p>
+        <div class="vuln-endpoint">POST /vulnerabilities/pollution  {"__proto__": {"isAdmin": true}}</div>
+        <a href="/vulnerabilities/pollution" class="exploit-btn exploit-warning" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 13. Mass Assignment -->
+      <div class="vuln-card sev-medium">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Mass Assignment</span>
+          <span class="sev-badge medium">Medium</span>
+        </div>
+        <p class="vuln-desc">The server blindly copies all JSON input fields to the user object, allowing protected properties like <code>isAdmin</code> to be overwritten.</p>
+        <div class="vuln-endpoint">POST /vulnerabilities/mass-assignment  {"role": "admin", "isAdmin": true}</div>
+        <a href="/vulnerabilities/mass-assignment" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 14. Cookie Injection -->
+      <div class="vuln-card sev-medium">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Cookie Injection</span>
+          <span class="sev-badge medium">Medium</span>
+        </div>
+        <p class="vuln-desc">Sets a cookie based on unvalidated user input, enabling session fixation and potential CRLF-based header injection attacks.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/cookie-reflect?param=evil</div>
+        <a href="/vulnerabilities/cookie-reflect?param=evil" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 15. CRLF Injection -->
+      <div class="vuln-card sev-medium">
+        <div class="vuln-card-header">
+          <span class="vuln-name">CRLF Injection</span>
+          <span class="sev-badge medium">Medium</span>
+        </div>
+        <p class="vuln-desc">User input is injected into a response header without sanitizing CRLF characters, enabling HTTP response splitting.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/crlf?input=test%0D%0AX-Evil: injected</div>
+        <a href="/vulnerabilities/crlf?input=test" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 16. CORS Misconfigurations -->
+      <div class="vuln-card sev-medium">
+        <div class="vuln-card-header">
+          <span class="vuln-name">CORS Vulnerabilities</span>
+          <span class="sev-badge medium">Medium</span>
+        </div>
+        <p class="vuln-desc">5 distinct CORS misconfigurations: Wildcard+Credentials, Subdomain Regex Bypass, Arbitrary Origin Reflection, and Null Origin trust.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/cors/*</div>
+        <a href="/vulnerabilities/cors" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 17. XPath Injection -->
+      <div class="vuln-card sev-medium">
+        <div class="vuln-card-header">
+          <span class="vuln-name">XPath Injection</span>
+          <span class="sev-badge medium">Medium</span>
+        </div>
+        <p class="vuln-desc">Manipulates XPath queries via direct string concatenation, allowing authentication bypass and data extraction from XML stores.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/xpath?username=admin'+or+'1'='1</div>
+        <a href="/vulnerabilities/xpath?username=admin" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 18. LDAP Injection -->
+      <div class="vuln-card sev-medium">
+        <div class="vuln-card-header">
+          <span class="vuln-name">LDAP Injection</span>
+          <span class="sev-badge medium">Medium</span>
+        </div>
+        <p class="vuln-desc">Manipulates LDAP filter strings by injecting wildcards or special characters to enumerate all users in the directory.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/ldap?user=*</div>
+        <a href="/vulnerabilities/ldap?user=*" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 19. HTTP Header Injection -->
+      <div class="vuln-card sev-low">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Header Injection</span>
+          <span class="sev-badge low">Low</span>
+        </div>
+        <p class="vuln-desc">Injects arbitrary response headers via unvalidated input, enabling cache poisoning and response manipulation attacks.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/header-injection?header_val=test</div>
+        <a href="/vulnerabilities/header-injection?header_val=test" class="exploit-btn" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 20. Angular CSTI -->
+      <div class="vuln-card sev-high">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Angular CSTI</span>
+          <span class="sev-badge high">High</span>
+        </div>
+        <p class="vuln-desc">Client-Side Template Injection via AngularJS 1.x — injects expressions like <code>{{7*7}}</code> that are evaluated by the Angular compiler.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/csti?name={{7*7}}</div>
+        <a href="/vulnerabilities/csti?name={{7*7}}" class="exploit-btn exploit-warning" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 21. Insecure Cookies -->
+      <div class="vuln-card sev-low">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Insecure Cookies</span>
+          <span class="sev-badge low">Low</span>
+        </div>
+        <p class="vuln-desc">Sets cookies with missing <code>HttpOnly</code>, <code>Secure</code>, and <code>SameSite</code> attributes, exposing them to XSS theft and CSRF.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/insecure-cookies</div>
+        <a href="/vulnerabilities/insecure-cookies" class="exploit-btn" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 22. GraphQL Introspection -->
+      <div class="vuln-card sev-info">
+        <div class="vuln-card-header">
+          <span class="vuln-name">GraphQL Introspection</span>
+          <span class="sev-badge info">Info</span>
+        </div>
+        <p class="vuln-desc">GraphQL introspection is enabled in production, exposing the full API schema including sensitive type names and field definitions.</p>
+        <div class="vuln-endpoint">POST /graphql  {"query": "{__schema{types{name}}}"}</div>
+        <a href="/vulnerabilities/graphql" class="exploit-btn" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 23. Information Disclosure -->
+      <div class="vuln-card sev-critical">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Information Disclosure</span>
+          <span class="sev-badge critical">Critical</span>
+        </div>
+        <p class="vuln-desc">Multiple endpoints leak sensitive data: environment variables with AWS keys, software versions, backup files, .git metadata, and .env files.</p>
+        <div class="vuln-endpoint">GET /env, /version, /.env, /config.js.bak, /.git/HEAD</div>
+        <a href="/env" class="exploit-btn exploit-danger" target="_blank">⚡ Exploit /env</a>
+      </div>
+
+      <!-- 24. Directory Listing + Trace -->
+      <div class="vuln-card sev-info">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Directory Listing & Trace</span>
+          <span class="sev-badge info">Info</span>
+        </div>
+        <p class="vuln-desc">Open directory listing reveals sensitive files for download; ASP.NET-style <code>/trace.axd</code> exposes internal request traces.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/directory-listing, /trace.axd</div>
+        <a href="/vulnerabilities/directory-listing" class="exploit-btn" target="_blank">⚡ Exploit</a>
+      </div>
+
+    </div><!-- /.vuln-grid -->
+  </main>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+</body>
+</html>
