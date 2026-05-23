@@ -87,6 +87,91 @@ const clearAllLogs = db.prepare(`
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ─── Auth: Session Store ──────────────────────────────────────────────────
+// Lightweight in-memory session (no extra npm deps needed)
+const sessions = new Map(); // token → { username, createdAt }
+const SESSION_COOKIE = 'rl_session';
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+
+// Demo credentials
+const DEMO_USERS = [
+  { username: 'snapsec0x01@gmail.com', password: 'snapsec0x01@gmail.com' },
+];
+
+function parseCookies(cookieHeader = '') {
+  return Object.fromEntries(
+    cookieHeader.split(';').map(c => c.trim().split('=').map(s => decodeURIComponent(s.trim())))
+  );
+}
+
+function getSession(req) {
+  const cookies = parseCookies(req.headers.cookie);
+  const token   = cookies[SESSION_COOKIE];
+  if (!token) return null;
+  const sess = sessions.get(token);
+  if (!sess) return null;
+  if (Date.now() - sess.createdAt > SESSION_TTL_MS) { sessions.delete(token); return null; }
+  return sess;
+}
+
+// ─── Auth: Login / Logout Routes (public — must be before auth guard) ────
+app.get('/login', (req, res) => {
+  if (getSession(req)) return res.redirect('/');
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.post('/login', (req, res) => {
+  const { username, password, next } = req.body;
+  const user = DEMO_USERS.find(u => u.username === username && u.password === password);
+  if (!user) {
+    return res.redirect('/login?error=1');
+  }
+  const token = uuidv4();
+  sessions.set(token, { username: user.username, createdAt: Date.now() });
+  res.setHeader('Set-Cookie',
+    `${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=28800`);
+  // Redirect to original destination or home
+  const dest = (next && next.startsWith('/') && !next.startsWith('//')) ? next : '/';
+  res.redirect(dest);
+});
+
+app.get('/logout', (req, res) => {
+  const cookies = parseCookies(req.headers.cookie);
+  const token   = cookies[SESSION_COOKIE];
+  if (token) sessions.delete(token);
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; Max-Age=0`);
+  res.redirect('/login');
+});
+
+// ─── Auth: Guard Middleware (all routes below this point are protected) ────
+// Public exceptions:
+//   • /login           — the login page itself
+//   • /public/*        — CSS, fonts, static assets
+//   • /vulnerabilities/api/users — intentionally unprotected (vuln demo)
+app.use((req, res, next) => {
+  const PUBLIC_PATHS = ['/login', '/logout'];
+  if (
+    PUBLIC_PATHS.includes(req.path) ||
+    req.path.startsWith('/public/') ||
+    req.path === '/vulnerabilities/api/users'
+  ) return next();
+
+  if (!getSession(req)) {
+    // API requests get 401 JSON; page requests get redirected
+    const wantsJson = req.headers.accept?.includes('application/json') ||
+                      req.headers['content-type']?.includes('application/json') ||
+                      req.path.startsWith('/api/') ||
+                      req.path.startsWith('/graphql');
+    if (wantsJson) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required', loginUrl: '/login' });
+    }
+    return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl)}`);
+  }
+  // Attach user to request for downstream use
+  req.currentUser = getSession(req);
+  next();
+});
+
 // ─── ANSI color helpers ───────────────────────────────────────────────────
 const ANSI = {
   reset:   '\x1b[0m',
@@ -121,10 +206,11 @@ function statusColor(code) {
 // ─── Request Logger Middleware ─────────────────────────────────────────────
 app.use((req, res, next) => {
   // Skip logging for UI pages and static assets
-  const skip = ['/', '/logs', '/custom', '/vulnerabilities', '/favicon.ico'].some(p => req.path === p) ||
-               req.path.startsWith('/public') ||
+  const skip = ['/', '/logs', '/custom', '/vulnerabilities', '/login', '/favicon.ico'].some(p => req.path === p) ||
+               req.path.startsWith('/public/') ||
                req.path.startsWith('/api/logs') ||
-               req.path.startsWith('/api/custom-endpoints');
+               req.path.startsWith('/api/custom-endpoints') ||
+               req.path === '/api/me';
 
   if (skip) return next();
 
@@ -237,6 +323,13 @@ app.get('/custom', (req, res) => {
 
 app.get('/vulnerabilities', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'vulnerabilities.html'));
+});
+
+// ─── Auth: Current User API ────────────────────────────────────────────────
+app.get('/api/me', (req, res) => {
+  const sess = getSession(req);
+  if (!sess) return res.status(401).json({ authenticated: false });
+  res.json({ authenticated: true, username: sess.username });
 });
 
 // ─── Demo API Endpoints ────────────────────────────────────────────────────

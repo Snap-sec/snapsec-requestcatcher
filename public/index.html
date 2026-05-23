@@ -15,7 +15,6 @@
   <div class="bg-glow glow-1"></div>
   <div class="bg-glow glow-2"></div>
 
-  <!-- Navbar -->
   <nav class="navbar">
     <div class="nav-inner">
       <div class="nav-brand">
@@ -32,8 +31,26 @@
         <a href="/vulnerabilities" class="nav-link" id="nav-vulns">Vulnerabilities</a>
         <a href="/logs" class="nav-link" id="nav-logs">View Logs</a>
       </div>
+      <div class="nav-user" id="nav-user" style="display:none">
+        <span class="nav-username" id="nav-username"></span>
+        <a href="/logout" class="nav-logout-btn" id="nav-logout">Sign Out</a>
+      </div>
     </div>
   </nav>
+
+  <script>
+    // Fetch current user and show in navbar
+    fetch('/api/me').then(r => r.json()).then(data => {
+      if (data.authenticated) {
+        const userEl = document.getElementById('nav-user');
+        const nameEl = document.getElementById('nav-username');
+        if (userEl && nameEl) {
+          nameEl.textContent = data.username;
+          userEl.style.display = 'flex';
+        }
+      }
+    }).catch(() => {});
+  </script>
 
   <!-- Main -->
   <main class="main-container">

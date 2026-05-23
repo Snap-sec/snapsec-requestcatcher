@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Request Logger — Sign In</title>
+  <meta name="description" content="Sign in to access the Request Logger dashboard." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/public/style.css" />
+  <style>
+    /* ── Login-page-specific overrides ──────────────────────────────────── */
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: var(--bg);
+    }
+
+    .login-wrapper {
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+      animation: fadeUp 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Brand header */
+    .login-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+    .login-brand-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: white;
+      box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+    }
+    .login-brand-name {
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    /* Card */
+    .login-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 32px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .login-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .login-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    /* Form fields */
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .field-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.1px;
+    }
+    .field-input-wrap {
+      position: relative;
+    }
+    .field-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+    .field-input {
+      width: 100%;
+      padding: 12px 14px 12px 42px;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 14.5px;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+    .field-input::placeholder { color: var(--text-dim); }
+    .field-input:focus {
+      border-color: rgba(37,99,235,0.5);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+      background: #fff;
+    }
+
+    /* Error alert */
+    .error-alert {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: rgba(185,28,28,0.07);
+      border: 1px solid rgba(185,28,28,0.25);
+      border-radius: var(--radius-sm);
+      color: #b91c1c;
+      font-size: 13.5px;
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+    .error-alert.show { display: flex; }
+
+    /* Submit button */
+    .login-btn {
+      width: 100%;
+      padding: 13px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+      margin-top: 8px;
+    }
+    .login-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(37,99,235,0.45);
+    }
+    .login-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Credentials hint */
+    .creds-hint {
+      margin-top: 24px;
+      padding: 14px 16px;
+      background: rgba(99,102,241,0.05);
+      border: 1px solid rgba(99,102,241,0.15);
+      border-radius: var(--radius-sm);
+    }
+    .creds-hint-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .cred-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      gap: 8px;
+    }
+    .cred-row:last-child { margin-bottom: 0; }
+    .cred-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .cred-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--accent);
+      background: rgba(37,99,235,0.08);
+      border: 1px solid rgba(37,99,235,0.2);
+      border-radius: 5px;
+      padding: 2px 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .cred-badge:hover {
+      background: rgba(37,99,235,0.15);
+    }
+
+    /* Footer note */
+    .login-footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .unprotected-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .unprotected-link:hover { text-decoration: underline; }
+
+    /* Spinner */
+    .btn-spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .login-btn.loading .btn-spinner { display: block; }
+    .login-btn.loading .btn-text { opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <div class="login-wrapper">
+
+    <!-- Brand -->
+    <div class="login-brand">
+      <div class="login-brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </div>
+      <span class="login-brand-name">RequestLogger</span>
+    </div>
+
+    <!-- Card -->
+    <div class="login-card">
+      <h1 class="login-title">Welcome back</h1>
+      <p class="login-subtitle">Sign in to access the dashboard, logs, and vulnerability lab.</p>
+
+      <!-- Error alert (shown on bad credentials via query param) -->
+      <div class="error-alert" id="error-alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span id="error-text">Invalid username or password.</span>
+      </div>
+
+      <form id="login-form" method="POST" action="/login" novalidate>
+        <!-- next redirect field -->
+        <input type="hidden" name="next" id="next-field" value="" />
+
+        <!-- Username -->
+        <div class="field-group">
+          <label class="field-label" for="username">Username</label>
+          <div class="field-input-wrap">
+            <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              class="field-input"
+              placeholder="snapsec0x01@gmail.com"
+              autocomplete="username"
+              autocapitalize="off"
+              spellcheck="false"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="field-group">
+          <label class="field-label" for="password">Password</label>
+          <div class="field-input-wrap">
+            <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="field-input"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              required
+            />
+          </div>
+        </div>
+
+        <button type="submit" class="login-btn" id="login-btn">
+          <div class="btn-spinner" id="btn-spinner"></div>
+          <span class="btn-text">Sign In</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="btn-arrow">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </form>
+    </div><!-- /.login-card -->
+
+  </div>
+
+  <script>
+    // Read ?next= and ?error= query params
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.has('next')) {
+      document.getElementById('next-field').value = params.get('next');
+    }
+
+
+    if (params.get('error') === '1') {
+      document.getElementById('error-alert').classList.add('show');
+    }
+
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+      const btn = document.getElementById('login-btn');
+      btn.classList.add('loading');
+      btn.disabled = true;
+      document.getElementById('btn-arrow').style.display = 'none';
+      document.getElementById('btn-spinner').style.display = 'block';
+    });
+  </script>
+</body>
+</html>
