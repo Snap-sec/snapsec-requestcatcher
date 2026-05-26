@@ -532,15 +532,32 @@ app.get('/vulnerabilities/cookie-reflect', (req, res) => {
 });
 
 // ── 5. CRLF Injection ──────────────────────────────────────────────────────
+// Node.js v14+ blocks CRLF in setHeader(). To demonstrate the real vulnerability
+// we write the raw HTTP/1.1 response directly to the socket, bypassing all
+// header validation — CRLF sequences in `input` will split into genuine new
+// headers on the wire.
 app.get('/vulnerabilities/crlf', (req, res) => {
   const input = req.query.input;
-  if (input) {
-    // VULNERABLE: Injecting input into a custom header
-    res.setHeader('X-Custom-Header', input);
-    res.json({ message: 'Header set', header: 'X-Custom-Header: ' + input });
-  } else {
-    res.send('Missing input. Try ?input=test%0d%0aInjected-Header: evil');
+  if (!input) {
+    return res.send('Missing input. Try ?input=test%0d%0aX-Evil:%20injected');
   }
+
+  // VULNERABLE: `input` is interpolated raw into the HTTP response headers.
+  // A %0D%0A sequence becomes \r\n and injects an entirely new header line.
+  const body = JSON.stringify({ message: 'Header set', header: `X-Custom-Header: ${input}` });
+  const rawResponse =
+    `HTTP/1.1 200 OK\r\n` +
+    `X-Custom-Header: ${input}\r\n` +        // ← CRLF in `input` splits here
+    `Content-Type: application/json\r\n` +
+    `Content-Length: ${Buffer.byteLength(body)}\r\n` +
+    `Connection: close\r\n` +
+    `\r\n` +
+    body;
+
+  // Write directly to the underlying TCP socket — Express/Node.js header
+  // guards are completely bypassed at this level.
+  res.socket.write(rawResponse);
+  res.socket.end();
 });
 
 // ── 6. OS Command Injection ─────────────────────────────────────────────────
@@ -683,13 +700,13 @@ try {
 
 app.get('/vulnerabilities/sqli', (req, res) => {
   const search = req.query.search || '';
-  // VULNERABLE: SQL Injection via direct concatenation
-  let sql = `SELECT id, username, isAdmin FROM vuln_users WHERE 1=1`;
-  if (search) sql += ` AND username LIKE '%${search}%'`;
-  let rows, error;
-  try { rows = db.prepare(sql).all(); }
-  catch (e) { error = e.message; }
-  res.json({ query: sql, results: rows, error: error || null });
+  // VULNERABLE: SQL Injection via direct string concatenation — no parameterisation, no error handling.
+  // A single quote (') in `search` will break the SQL syntax and surface a raw SQLite error (error-based SQLi).
+  const sql = `SELECT id, username, isAdmin FROM vuln_users WHERE username LIKE '%${search}%'`;
+
+  // Intentionally NOT wrapped in try/catch — errors propagate to the client
+  const rows = db.prepare(sql).all();
+  res.json({ query: sql, results: rows });
 });
 
 // ── 16. Prototype Pollution ─────────────────────────────────────────────────
