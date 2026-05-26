@@ -46,8 +46,12 @@ const updateStatus = db.prepare(`
   UPDATE request_logs SET status = ?, response_headers = ?, response_body = ? WHERE id = ?
 `);
 
-const getAllLogs = db.prepare(`
-  SELECT * FROM request_logs ORDER BY timestamp DESC
+const getLogsPage = db.prepare(`
+  SELECT * FROM request_logs ORDER BY timestamp DESC LIMIT ? OFFSET ?
+`);
+
+const countLogs = db.prepare(`
+  SELECT COUNT(*) as total FROM request_logs
 `);
 
 // Create the custom_endpoints table
@@ -404,11 +408,21 @@ app.put('/api/custom-endpoints/:id', (req, res) => {
 });
 
 // ─── Logs API ──────────────────────────────────────────────────────────────
+const PAGE_SIZE = 100;
+
 app.get('/api/logs', (req, res) => {
   try {
-    const logs = getAllLogs.all();
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.max(1, parseInt(req.query.limit) || PAGE_SIZE);
+    const offset = (page - 1) * limit;
+
+    const { total } = countLogs.get();
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    const rows = getLogsPage.all(limit, offset);
+
     // Normalize column names to camelCase for the frontend
-    const normalized = logs.map(row => ({
+    const logs = rows.map(row => ({
       id:              row.id,
       timestamp:       row.timestamp,
       method:          row.method,
@@ -422,7 +436,8 @@ app.get('/api/logs', (req, res) => {
       responseHeaders: row.response_headers,
       responseBody:    row.response_body,
     }));
-    res.json(normalized);
+
+    res.json({ logs, total, page, totalPages, limit });
   } catch (err) {
     console.error('Error reading logs:', err.message);
     res.status(500).json({ error: 'Failed to fetch logs' });

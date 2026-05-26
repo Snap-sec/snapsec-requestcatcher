@@ -138,6 +138,12 @@
           <p class="empty-desc">Head to the <a href="/" class="link">Home page</a> and fire some demo requests.</p>
         </div>
       </div>
+
+      <!-- Pagination -->
+      <div class="pagination-wrapper" id="pagination-wrapper" style="display:none">
+        <div class="pagination" id="pagination"></div>
+        <span class="pagination-info" id="pagination-info"></span>
+      </div>
     </section>
   </main>
 
@@ -145,9 +151,14 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    let allLogs = [];
+    const PAGE_SIZE = 100;
+
+    let allLogs      = [];   // current page's logs (from server)
     let activeFilter = 'ALL';
-    let searchQuery = '';
+    let searchQuery  = '';
+    let currentPage  = 1;
+    let totalPages   = 1;
+    let totalLogs    = 0;
 
     function showToast(message, type = 'success') {
       const toast = document.getElementById('toast');
@@ -158,14 +169,16 @@
 
     function setFilter(method) {
       activeFilter = method;
+      currentPage  = 1;  // reset to page 1 on filter change
       document.querySelectorAll('.filter-pill').forEach(p => {
         p.classList.toggle('active', p.dataset.method === method);
       });
-      renderLogs();
+      fetchLogs();
     }
 
     function onSearch(value) {
       searchQuery = value.trim().toLowerCase();
+      currentPage = 1;  // reset to page 1 on new search
       document.getElementById('search-clear').style.opacity = searchQuery ? '1' : '0';
       document.getElementById('search-clear').style.pointerEvents = searchQuery ? 'auto' : 'none';
       renderLogs();
@@ -383,7 +396,6 @@
       }).catch(() => showToast('Failed to copy', 'error'));
     }
 
-
     function toggleLog(id) {
       const body = document.getElementById(`body-${id}`);
       const chevron = document.getElementById(`chevron-${id}`);
@@ -391,28 +403,97 @@
       chevron.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
     }
 
+    // ── Pagination renderer ─────────────────────────────────────────────────
+    function renderPagination() {
+      const wrapper  = document.getElementById('pagination-wrapper');
+      const pagEl    = document.getElementById('pagination');
+      const infoEl   = document.getElementById('pagination-info');
 
+      if (totalPages <= 1) {
+        wrapper.style.display = 'none';
+        return;
+      }
+
+      wrapper.style.display = 'flex';
+
+      // Offset shown on page (after client-side filter)
+      const start = (currentPage - 1) * PAGE_SIZE + 1;
+      const end   = Math.min(currentPage * PAGE_SIZE, totalLogs);
+      infoEl.textContent = `Showing ${start}–${end} of ${totalLogs}`;
+
+      // Build page buttons with a sliding window
+      const WINDOW = 5;
+      let pages = [];
+      let half  = Math.floor(WINDOW / 2);
+      let from  = Math.max(1, currentPage - half);
+      let to    = Math.min(totalPages, from + WINDOW - 1);
+      if (to - from + 1 < WINDOW) from = Math.max(1, to - WINDOW + 1);
+
+      let html = '';
+
+      // Prev button
+      html += `<button class="page-btn page-arrow" id="page-prev"
+                 onclick="goToPage(${currentPage - 1})"
+                 ${currentPage === 1 ? 'disabled' : ''}>
+                 &#8592; Prev
+               </button>`;
+
+      // First page + ellipsis
+      if (from > 1) {
+        html += `<button class="page-btn" onclick="goToPage(1)">1</button>`;
+        if (from > 2) html += `<span class="page-ellipsis">…</span>`;
+      }
+
+      // Window pages
+      for (let p = from; p <= to; p++) {
+        html += `<button class="page-btn ${p === currentPage ? 'page-active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+      }
+
+      // Last page + ellipsis
+      if (to < totalPages) {
+        if (to < totalPages - 1) html += `<span class="page-ellipsis">…</span>`;
+        html += `<button class="page-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+      }
+
+      // Next button
+      html += `<button class="page-btn page-arrow" id="page-next"
+                 onclick="goToPage(${currentPage + 1})"
+                 ${currentPage === totalPages ? 'disabled' : ''}>
+                 Next &#8594;
+               </button>`;
+
+      pagEl.innerHTML = html;
+    }
+
+    function goToPage(page) {
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
+      fetchLogs();
+      // Scroll to top of logs section
+      document.querySelector('.logs-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Render ──────────────────────────────────────────────────────────────
     function renderLogs() {
-      const container = document.getElementById('logs-container');
+      const container  = document.getElementById('logs-container');
       const countBadge = document.getElementById('log-count-badge');
       const searchHint = document.getElementById('search-hint');
 
-      // Apply method filter
+      // Client-side filter on current page logs (method + search)
       let filtered = activeFilter === 'ALL'
         ? allLogs
         : allLogs.filter(l => l.method === activeFilter);
 
-      // Apply search filter across all content fields
       if (searchQuery) {
         filtered = filtered.filter(l => matchesSearch(l, searchQuery));
       }
 
-      // Update badge
-      countBadge.textContent = `${allLogs.length} request${allLogs.length !== 1 ? 's' : ''} captured`;
+      // Badge shows total across all pages
+      countBadge.textContent = `${totalLogs} request${totalLogs !== 1 ? 's' : ''} captured`;
 
-      // Update search hint
+      // Search hint shows matches on current page
       if (searchQuery) {
-        searchHint.textContent = `${filtered.length} match${filtered.length !== 1 ? 'es' : ''} for "${searchQuery}"`;
+        searchHint.textContent = `${filtered.length} match${filtered.length !== 1 ? 'es' : ''} on this page for "${searchQuery}"`;
         searchHint.style.display = 'inline';
       } else {
         searchHint.style.display = 'none';
@@ -428,20 +509,26 @@
               </svg>
             </div>
             <h3 class="empty-title">${searchQuery ? 'No matching requests' : 'No requests captured yet'}</h3>
-            <p class="empty-desc">${searchQuery ? `No results for <strong style="color:#111827">"${searchQuery}"</strong>. Try a different keyword.` : 'Head to the <a href="/" class="link">Home page</a> and fire some demo requests.'}</p>
+            <p class="empty-desc">${searchQuery ? `No results for <strong style="color:#111827">"${searchQuery}"</strong> on this page.` : 'Head to the <a href="/" class="link">Home page</a> and fire some demo requests.'}</p>
           </div>
         `;
+        renderPagination();
         return;
       }
 
       container.innerHTML = filtered.map(formatLogEntry).join('');
+      renderPagination();
     }
 
     async function fetchLogs() {
       try {
-        const res = await fetch('/api/logs');
-        const logs = await res.json();
-        allLogs = logs;
+        const params = new URLSearchParams({ page: currentPage, limit: PAGE_SIZE });
+        const res    = await fetch(`/api/logs?${params}`);
+        const data   = await res.json();
+        allLogs    = data.logs;
+        totalLogs  = data.total;
+        totalPages = data.totalPages;
+        currentPage = data.page;
         renderLogs();
       } catch (e) {
         showToast('Failed to fetch logs', 'error');
@@ -452,7 +539,10 @@
       if (!confirm('Clear all captured logs?')) return;
       try {
         await fetch('/api/logs', { method: 'DELETE' });
-        allLogs = [];
+        allLogs    = [];
+        totalLogs  = 0;
+        totalPages = 1;
+        currentPage = 1;
         renderLogs();
         showToast('All logs cleared', 'success');
       } catch (e) {
