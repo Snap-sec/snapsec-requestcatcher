@@ -177,6 +177,120 @@
     @media (max-width: 640px) {
       .vuln-grid { grid-template-columns: 1fr; }
     }
+
+    /* Search toolbar above the grid */
+    .vuln-search-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .vuln-search-toolbar .search-box {
+      width: 360px;
+      max-width: 100%;
+    }
+
+    /* View toggle */
+    .view-toggle {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .view-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .view-btn:not(:last-child) { border-right: 1px solid var(--border); }
+    .view-btn:hover { background: #f3f4f6; color: var(--text); }
+    .view-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Table view */
+    .vuln-table-wrap {
+      display: none;
+      width: 100%;
+      overflow-x: auto;
+      margin-top: 40px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .vuln-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    .vuln-table thead tr {
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+    }
+    .vuln-table th {
+      padding: 11px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .vuln-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .vuln-table tbody tr:last-child td { border-bottom: none; }
+    .vuln-table tbody tr {
+      transition: background 0.15s ease;
+    }
+    .vuln-table tbody tr:hover { background: #f9fafb; }
+    .vuln-table .td-num {
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      width: 36px;
+    }
+    .vuln-table .td-name {
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .vuln-table .td-endpoint {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      max-width: 280px;
+      word-break: break-all;
+    }
+    .vuln-table .td-desc {
+      color: var(--text-muted);
+      font-size: 13px;
+      max-width: 340px;
+      line-height: 1.5;
+    }
+    .vuln-table .td-action { white-space: nowrap; }
+    .vuln-table .exploit-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 14px;
+      font-size: 12.5px;
+    }
   </style>
 </head>
 <body>
@@ -211,7 +325,7 @@
     <section class="hero logs-hero">
       <div class="hero-badge">
         <span class="badge-dot" style="background:#dc2626"></span>
-        24 Live Vulnerability Demos
+        28 Live Vulnerability Demos
       </div>
       <h1 class="hero-title">Vulnerability <span class="gradient-text">Lab</span></h1>
       <p class="hero-subtitle">
@@ -221,12 +335,56 @@
       <!-- Stats Bar -->
       <div class="stats-bar">
         <div class="stat-pill"><div class="stat-dot dot-critical"></div>5 Critical</div>
-        <div class="stat-pill"><div class="stat-dot dot-high"></div>8 High</div>
-        <div class="stat-pill"><div class="stat-dot dot-medium"></div>6 Medium</div>
+        <div class="stat-pill"><div class="stat-dot dot-high"></div>11 High</div>
+        <div class="stat-pill"><div class="stat-dot dot-medium"></div>7 Medium</div>
         <div class="stat-pill"><div class="stat-dot dot-low"></div>3 Low</div>
         <div class="stat-pill"><div class="stat-dot dot-info"></div>2 Info</div>
       </div>
     </section>
+
+    <!-- Search toolbar (left-aligned, above grid) -->
+    <div class="vuln-search-toolbar">
+      <div class="search-box">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          type="text"
+          id="vuln-search"
+          class="search-input"
+          placeholder="Search by name, type, severity, endpoint…"
+          oninput="filterVulns(this.value)"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="search-clear" id="vuln-search-clear" onclick="clearVulnSearch()" title="Clear search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- View toggle -->
+      <div class="view-toggle">
+        <button class="view-btn active" id="btn-grid" onclick="setView('grid')" title="Grid view">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+          Grid
+        </button>
+        <button class="view-btn" id="btn-table" onclick="setView('table')" title="Table view">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M3 6h18M3 12h18M3 18h18M9 3v18"/>
+          </svg>
+          Table
+        </button>
+      </div>
+
+      <span class="search-hint" id="vuln-search-hint" style="display:none"></span>
+    </div>
 
     <!-- Vulnerabilities Grid -->
     <div class="vuln-grid">
@@ -396,15 +554,59 @@
         <a href="/vulnerabilities/crlf?input=test" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
       </div>
 
-      <!-- 16. CORS Misconfigurations -->
+      <!-- 16a. CORS — Wildcard + Credentials -->
       <div class="vuln-card sev-medium">
         <div class="vuln-card-header">
-          <span class="vuln-name">CORS Vulnerabilities</span>
+          <span class="vuln-name">CORS: Wildcard + Credentials</span>
           <span class="sev-badge medium">Medium</span>
         </div>
-        <p class="vuln-desc">5 distinct CORS misconfigurations: Wildcard+Credentials, Subdomain Regex Bypass, Arbitrary Origin Reflection, and Null Origin trust.</p>
-        <div class="vuln-endpoint">GET /vulnerabilities/cors/*</div>
-        <a href="/vulnerabilities/cors" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+        <p class="vuln-desc">Returns <code>Access-Control-Allow-Origin: *</code> combined with <code>Access-Control-Allow-Credentials: true</code> — browsers block this combination but many HTTP clients don't.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/cors/wildcard</div>
+        <a href="/vulnerabilities/cors/wildcard" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 16b. CORS — Subdomain Bypass -->
+      <div class="vuln-card sev-medium">
+        <div class="vuln-card-header">
+          <span class="vuln-name">CORS: Subdomain Bypass</span>
+          <span class="sev-badge medium">Medium</span>
+        </div>
+        <p class="vuln-desc">Trusts any origin ending with <code>example.com</code>, allowing an attacker-controlled subdomain like <code>evil.example.com</code> to make credentialed cross-origin requests.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/cors/subdomain</div>
+        <a href="/vulnerabilities/cors/subdomain" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 16c. CORS — Origin Reflection -->
+      <div class="vuln-card sev-medium">
+        <div class="vuln-card-header">
+          <span class="vuln-name">CORS: Origin Reflection</span>
+          <span class="sev-badge medium">Medium</span>
+        </div>
+        <p class="vuln-desc">Reflects the incoming <code>Origin</code> header directly back as the allowed origin with credentials, granting any domain full cross-origin access.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/cors/reflection</div>
+        <a href="/vulnerabilities/cors/reflection" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 16d. CORS — Regex Bypass -->
+      <div class="vuln-card sev-medium">
+        <div class="vuln-card-header">
+          <span class="vuln-name">CORS: Regex Bypass</span>
+          <span class="sev-badge medium">Medium</span>
+        </div>
+        <p class="vuln-desc">Uses an un-anchored regex (<code>/example.com/</code>) to validate origin, allowing bypasses like <code>notexample.com</code> or <code>example.com.evil.io</code>.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/cors/regex</div>
+        <a href="/vulnerabilities/cors/regex" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 16e. CORS — Null Origin -->
+      <div class="vuln-card sev-medium">
+        <div class="vuln-card-header">
+          <span class="vuln-name">CORS: Null Origin Trust</span>
+          <span class="sev-badge medium">Medium</span>
+        </div>
+        <p class="vuln-desc">Explicitly trusts <code>Origin: null</code>, which browsers send from sandboxed iframes, <code>file://</code> pages, and redirected requests — enabling cross-origin data theft.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/cors/null</div>
+        <a href="/vulnerabilities/cors/null" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
       </div>
 
       <!-- 17. XPath Injection -->
@@ -495,10 +697,216 @@
         <a href="/vulnerabilities/directory-listing" class="exploit-btn" target="_blank">⚡ Exploit</a>
       </div>
 
+      <!-- 25. Vulnerable Library -->
+      <div class="vuln-card sev-high">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Vulnerable Library</span>
+          <span class="sev-badge high">High</span>
+        </div>
+        <p class="vuln-desc">Loads jQuery 3.4.0 — vulnerable to <strong>Prototype Pollution</strong> (CVE-2019-11358) via <code>$.extend()</code>. An attacker can inject properties into <code>Object.prototype</code>, affecting the entire JS runtime.</p>
+        <div class="vuln-endpoint">&lt;script src="/assets/js/jquery-3.4.0.js"&gt;&lt;/script&gt;</div>
+        <a href="/vulnerabilities/vulnerable-library" class="exploit-btn exploit-warning" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 26. Second-Order Subdomain Takeover -->
+      <div class="vuln-card sev-high">
+        <div class="vuln-card-header">
+          <span class="vuln-name">Second-Order Subdomain Takeover</span>
+          <span class="sev-badge high">High</span>
+        </div>
+        <p class="vuln-desc">A webpage that loads resources/scripts from an expired, unregistered, or unclaimed external subdomain (<code>dead.snapsec.co</code>), allowing an attacker to claim the subdomain and execute malicious code.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/subdomain-takeover</div>
+        <a href="/vulnerabilities/subdomain-takeover" class="exploit-btn exploit-warning" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 27. JS Secret Exposed -->
+      <div class="vuln-card sev-medium">
+        <div class="vuln-card-header">
+          <span class="vuln-name">JS Secret Exposed</span>
+          <span class="sev-badge medium">Medium</span>
+        </div>
+        <p class="vuln-desc">A webpage that loads a client-side JavaScript file containing hardcoded sensitive API keys or credentials, exposing them to anyone inspecting the source code.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/js-secret-exposed</div>
+        <a href="/vulnerabilities/js-secret-exposed" class="exploit-btn exploit-primary" target="_blank">⚡ Exploit</a>
+      </div>
+
+      <!-- 28. NoSQL Injection (Error-based) -->
+      <div class="vuln-card sev-high">
+        <div class="vuln-card-header">
+          <span class="vuln-name">NoSQL Injection (Error-based)</span>
+          <span class="sev-badge high">High</span>
+        </div>
+        <p class="vuln-desc">Executes simulated MongoDB queries using an un-sanitized <code>$where</code> clause. Malformed input breaks JavaScript syntax inside the DB evaluator and dumps raw MongoServerError traces.</p>
+        <div class="vuln-endpoint">GET /vulnerabilities/nosqli?username=admin</div>
+        <a href="/vulnerabilities/nosqli?username=admin'" class="exploit-btn exploit-warning" target="_blank">⚡ Exploit</a>
+      </div>
+
     </div><!-- /.vuln-grid -->
+
+    <!-- Table view (populated by JS) -->
+    <div class="vuln-table-wrap" id="vuln-table-wrap">
+      <table class="vuln-table" id="vuln-table">
+        <thead>
+          <tr>
+            <th class="td-num">#</th>
+            <th>Vulnerability</th>
+            <th>Severity</th>
+            <th>Endpoint</th>
+            <th>Description</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="vuln-tbody"></tbody>
+      </table>
+    </div>
+
   </main>
 
   <!-- Toast -->
   <div class="toast" id="toast"></div>
+
+  <script>
+    let currentView = 'grid';
+    // Each entry mirrors one .vuln-card; populated by buildTable()
+    let tableRows = [];
+
+    // ── Init ────────────────────────────────────────────────────────────────
+    function initPage() {
+      const cards = document.querySelectorAll('.vuln-card');
+      const tbody = document.getElementById('vuln-tbody');
+      tbody.innerHTML = '';
+      tableRows = [];
+
+      cards.forEach((card, i) => {
+        // Index text for search
+        card.dataset.search = card.textContent.toLowerCase();
+
+        // Extract data from card DOM
+        const name     = card.querySelector('.vuln-name')?.textContent.trim()  || '';
+        const sevBadge = card.querySelector('.sev-badge');
+        const sevText  = sevBadge?.textContent.trim() || '';
+        const sevClass = sevBadge?.className.replace('sev-badge', '').trim()   || '';
+        const endpoint = card.querySelector('.vuln-endpoint')?.textContent.trim() || '';
+        const desc     = card.querySelector('.vuln-desc')?.textContent.trim()  || '';
+        const actionEl = card.querySelector('.exploit-btn');
+        const actionHTML = actionEl ? actionEl.outerHTML : '';
+
+        // Build table row
+        const tr = document.createElement('tr');
+        tr.dataset.search = card.dataset.search;
+        tr.innerHTML = `
+          <td class="td-num">${i + 1}</td>
+          <td class="td-name">${escHtml(name)}</td>
+          <td><span class="sev-badge ${escHtml(sevClass)}">${escHtml(sevText)}</span></td>
+          <td class="td-endpoint">${escHtml(endpoint)}</td>
+          <td class="td-desc">${escHtml(desc)}</td>
+          <td class="td-action">${actionHTML}</td>
+        `;
+        tbody.appendChild(tr);
+        tableRows.push(tr);
+      });
+    }
+
+    function escHtml(str) {
+      return str
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ── View switching ───────────────────────────────────────────────────────
+    function setView(view) {
+      currentView = view;
+      const grid  = document.querySelector('.vuln-grid');
+      const table = document.getElementById('vuln-table-wrap');
+      const btnGrid  = document.getElementById('btn-grid');
+      const btnTable = document.getElementById('btn-table');
+
+      if (view === 'grid') {
+        grid.style.display  = '';
+        table.style.display = 'none';
+        btnGrid.classList.add('active');
+        btnTable.classList.remove('active');
+      } else {
+        grid.style.display  = 'none';
+        table.style.display = 'block';
+        btnGrid.classList.remove('active');
+        btnTable.classList.add('active');
+      }
+
+      // Re-apply current search to the newly visible view
+      const q = document.getElementById('vuln-search').value;
+      filterVulns(q);
+    }
+
+    // ── Search ───────────────────────────────────────────────────────────────
+    function filterVulns(query) {
+      const q        = query.trim().toLowerCase();
+      const cards    = document.querySelectorAll('.vuln-card');
+      const clearBtn = document.getElementById('vuln-search-clear');
+      const hint     = document.getElementById('vuln-search-hint');
+
+      clearBtn.style.opacity       = q ? '1' : '0';
+      clearBtn.style.pointerEvents = q ? 'auto' : 'none';
+
+      let visible = 0;
+
+      // Filter cards
+      cards.forEach(card => {
+        const match = !q || card.dataset.search.includes(q);
+        card.style.display = match ? '' : 'none';
+        if (match) visible++;
+      });
+
+      // Filter table rows
+      tableRows.forEach(tr => {
+        const match = !q || tr.dataset.search.includes(q);
+        tr.style.display = match ? '' : 'none';
+      });
+
+      // Grid empty state
+      let emptyEl = document.getElementById('vuln-empty-state');
+      if (currentView === 'grid' && q && visible === 0) {
+        if (!emptyEl) {
+          emptyEl = document.createElement('div');
+          emptyEl.id = 'vuln-empty-state';
+          emptyEl.style.cssText = 'grid-column:1/-1;text-align:center;padding:60px 24px;color:var(--text-muted)';
+          document.querySelector('.vuln-grid').appendChild(emptyEl);
+        }
+        emptyEl.innerHTML = `
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:16px;color:var(--text-dim)">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <p style="font-size:16px;font-weight:600;color:var(--text-dim);margin-bottom:6px">No vulnerabilities found</p>
+          <p style="font-size:13.5px">No results for <strong style="color:var(--text)">&ldquo;${query.trim()}&rdquo;</strong>. Try a different keyword.</p>
+        `;
+        emptyEl.style.display = '';
+      } else if (emptyEl) {
+        emptyEl.style.display = 'none';
+      }
+
+      // Hint shows count from whichever view is active
+      const count = currentView === 'grid'
+        ? visible
+        : tableRows.filter(tr => tr.style.display !== 'none').length;
+
+      if (q) {
+        hint.textContent = `${count} match${count !== 1 ? 'es' : ''} for "${query.trim()}"`;
+        hint.style.display = 'inline';
+      } else {
+        hint.style.display = 'none';
+      }
+    }
+
+    function clearVulnSearch() {
+      const input = document.getElementById('vuln-search');
+      input.value = '';
+      filterVulns('');
+      input.focus();
+    }
+
+    document.addEventListener('DOMContentLoaded', initPage);
+  </script>
+
 </body>
 </html>

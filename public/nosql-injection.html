@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NoSQL Injection (Error-based) — Vulnerability Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/style.css">
+  <style>
+    .vuln-page-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: all 0.2s ease;
+    }
+    .back-link:hover { border-color: var(--border-h); color: var(--text); background: #f3f4f6; }
+
+    .vuln-hero {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .vuln-hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #dc2626, #ef4444);
+    }
+    .vuln-hero h2 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .vuln-hero p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-width: 700px;
+    }
+    
+    .exploit-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .exploit-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: #f8fafc;
+    }
+    .exploit-panel-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .exploit-panel-body { padding: 20px; }
+
+    .query-form {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .query-input {
+      flex: 1;
+      padding: 10px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .query-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+    .query-btn {
+      padding: 10px 24px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .query-btn:hover { background: #1d4ed8; }
+
+    .code-block {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13.5px;
+      line-height: 1.75;
+      padding: 18px 20px;
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .output-box {
+      margin-top: 16px;
+    }
+    .output-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .mongo-error {
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      border-left: 4px solid #dc2626;
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin-top: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #991b1b;
+    }
+    .mongo-error-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #7f1d1d;
+    }
+    .mongo-error-stack {
+      margin-top: 10px;
+      font-size: 11.5px;
+      color: #b91c1c;
+      white-space: pre-wrap;
+    }
+
+    .payload-suggestions {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .payload-suggestion {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .payload-link {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      text-decoration: none;
+      background: #eff6ff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-left: 6px;
+      border: 1px dashed rgba(37,99,235,0.25);
+    }
+    .payload-link:hover { background: #dbeafe; }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <nav class="navbar">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <span class="brand-name">RequestLogger</span>
+      </div>
+      <div class="nav-links">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/custom" class="nav-link">Custom Endpoints</a>
+        <a href="/vulnerabilities" class="nav-link active">Vulnerabilities</a>
+        <a href="/logs" class="nav-link">View Logs</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-container">
+    <div class="vuln-page-header">
+      <a href="/vulnerabilities" class="back-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Vulnerabilities
+      </a>
+    </div>
+
+    <!-- Hero -->
+    <div class="vuln-hero">
+      <h2>Error-based NoSQL Injection</h2>
+      <p>
+        This page simulates a MongoDB backend performing dynamic query evaluation via <code>$where</code>.
+        Since the input is concatenated directly into a JavaScript expression inside the database query engine, 
+        malformed syntax triggers a database execution failure, exposing raw internal MongoServerError stack traces.
+      </p>
+    </div>
+
+    <!-- Exploit Area -->
+    <div class="exploit-panel">
+      <div class="exploit-panel-header">
+        <span class="exploit-panel-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          Search User Database (Simulated MongoDB)
+        </span>
+      </div>
+      <div class="exploit-panel-body">
+        <div class="query-form">
+          <input type="text" id="username-input" class="query-input" placeholder="Enter username (e.g. admin, guest)" value="admin">
+          <button class="query-btn" onclick="submitQuery()">Search</button>
+        </div>
+
+        <div class="output-label">API Request</div>
+        <div class="code-block" style="background:#1e293b; color:#94a3b8; font-size:12.5px; padding:12px 16px; margin-bottom:20px" id="api-request-url">
+          GET /vulnerabilities/nosqli?username=admin
+        </div>
+
+        <div id="result-container" style="display:none">
+          <div class="output-label">Database Results</div>
+          <div class="code-block" id="json-output"></div>
+        </div>
+
+        <div id="error-container" style="display:none">
+          <div class="output-label">Database Error Output</div>
+          <div class="mongo-error" id="error-output"></div>
+        </div>
+
+        <div class="payload-suggestions">
+          <div class="output-label" style="margin-bottom:4px">Test Payloads</div>
+          <div class="payload-suggestion">
+            Normal request: 
+            <a href="#" class="payload-link" onclick="setPayload('admin')">admin</a>
+          </div>
+          <div class="payload-suggestion">
+            Trigger Syntax Error: 
+            <a href="#" class="payload-link" onclick="setPayload(&quot;admin'&quot;)">admin'</a>
+          </div>
+          <div class="payload-suggestion">
+            Trigger Reference Error: 
+            <a href="#" class="payload-link" onclick="setPayload(&quot;admin' || undefined_variable&quot;)">admin' || undefined_variable</a>
+          </div>
+          <div class="payload-suggestion">
+            Logical Bypass (Always True): 
+            <a href="#" class="payload-link" onclick="setPayload(&quot;admin' || '1'=='1&quot;)">admin' || '1'=='1</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function setPayload(payload) {
+      document.getElementById('username-input').value = payload;
+      submitQuery();
+    }
+
+    function submitQuery() {
+      const username = document.getElementById('username-input').value;
+      const apiRequestUrl = document.getElementById('api-request-url');
+      const resultContainer = document.getElementById('result-container');
+      const errorContainer = document.getElementById('error-container');
+      const jsonOutput = document.getElementById('json-output');
+      const errorOutput = document.getElementById('error-output');
+
+      const url = `/vulnerabilities/nosqli?username=${encodeURIComponent(username)}`;
+      apiRequestUrl.textContent = `GET ${window.location.origin}${url}`;
+
+      fetch(url)
+        .then(response => {
+          return response.json().then(data => {
+            if (!response.ok) {
+              return Promise.reject(data);
+            }
+            return data;
+          });
+        })
+        .then(data => {
+          errorContainer.style.display = 'none';
+          resultContainer.style.display = 'block';
+          jsonOutput.textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(err => {
+          resultContainer.style.display = 'none';
+          errorContainer.style.display = 'block';
+
+          if (err && err.name === 'MongoServerError') {
+            errorOutput.innerHTML = `
+              <div class="mongo-error-title">${err.name}: ${err.message}</div>
+              <div><strong>Code:</strong> ${err.code} (${err.codeName})</div>
+              <div><strong>errmsg:</strong> ${err.errmsg}</div>
+              <div class="mongo-error-stack">${err.stack}</div>
+            `;
+          } else {
+            errorOutput.textContent = JSON.stringify(err, null, 2);
+          }
+        });
+    }
+
+    // Run initial search
+    document.addEventListener('DOMContentLoaded', submitQuery);
+  </script>
+</body>
+</html>

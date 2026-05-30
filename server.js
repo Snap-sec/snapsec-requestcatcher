@@ -309,8 +309,9 @@ function capitalizeHeader(header) {
     .join('-');
 }
 
-// ─── Serve Static Files ────────────────────────────────────────────────────
+// ─── Serve Static Files ──────────────────────────────────────────────────────────────
 app.use('/public', express.static(path.join(__dirname, 'public')));
+app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 
 // ─── Pages ────────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
@@ -327,6 +328,18 @@ app.get('/custom', (req, res) => {
 
 app.get('/vulnerabilities', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'vulnerabilities.html'));
+});
+
+app.get('/vulnerabilities/vulnerable-library', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'vuln-library.html'));
+});
+
+app.get('/vulnerabilities/subdomain-takeover', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'subdomain-takeover.html'));
+});
+
+app.get('/vulnerabilities/js-secret-exposed', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'js-secret-exposed.html'));
 });
 
 // ─── Auth: Current User API ────────────────────────────────────────────────
@@ -707,6 +720,55 @@ app.get('/vulnerabilities/sqli', (req, res) => {
   // Intentionally NOT wrapped in try/catch — errors propagate to the client
   const rows = db.prepare(sql).all();
   res.json({ query: sql, results: rows });
+});
+
+// ── 15b. NoSQL Injection (Error-based) ───────────────────────────────────────
+app.get('/vulnerabilities/nosql-injection', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'nosql-injection.html'));
+});
+
+app.get('/vulnerabilities/nosqli', (req, res) => {
+  const username = req.query.username || '';
+
+  try {
+    if (typeof username === 'object') {
+      // If object query is passed (e.g. ?username[$ne]=admin)
+      res.json({
+        status: "success",
+        query: { username },
+        results: [{ username: "admin", role: "administrator" }]
+      });
+      return;
+    }
+
+    // Simulate $where evaluation.
+    // The developer dynamically concatenated query input inside a $where JS expression:
+    // db.users.find({ $where: `this.username == '${username}'` })
+    const jsExpression = `this.username == '${username}'`;
+
+    const users = [
+      { username: 'admin', role: 'administrator' },
+      { username: 'guest', role: 'user' }
+    ];
+
+    const results = users.filter(user => {
+      const fn = new Function(`return (${jsExpression})`);
+      return fn.call(user);
+    });
+
+    res.json({ query: { $where: jsExpression }, results });
+  } catch (err) {
+    // Return a realistic MongoDB execution error structure
+    res.status(500).json({
+      name: "MongoServerError",
+      message: err.message,
+      code: 139,
+      codeName: "JSInterpreterFailure",
+      ok: 0,
+      errmsg: `ReferenceError: ${err.message} at src/mongo/shell/query.js`,
+      stack: `MongoServerError: ReferenceError: ${err.message}\n    at src/mongo/shell/query.js:12:20`
+    });
+  }
 });
 
 // ── 16. Prototype Pollution ─────────────────────────────────────────────────

